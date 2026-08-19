@@ -19,11 +19,21 @@ from pydantic import BaseModel
 
 # Configuração
 BASE_DIR = Path(__file__).parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
 
-PROJECTS_DIR = BASE_DIR / "projects"
-PROJECTS_DIR.mkdir(exist_ok=True)
+
+def _safe_mkdir(path: Path) -> Path:
+    """Cria o diretório; em filesystem read-only (Vercel serverless) usa /tmp."""
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    except OSError:
+        fallback = Path("/tmp") / path.name
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+UPLOAD_DIR = _safe_mkdir(BASE_DIR / "uploads")
+PROJECTS_DIR = _safe_mkdir(BASE_DIR / "projects")
 
 ALLOWED_EXTENSIONS = {
     "pdf": [".pdf"],
