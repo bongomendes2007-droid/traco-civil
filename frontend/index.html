@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRAÇO — Upload de Plantas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --laranja: #FF5A1F;
+            --laranja-brasa: #D9440F;
+            --laranja-fogo: #B8360B;
+            --laranja-claro: #FFC9A6;
+            --laranja-vidro: #FFF0E6;
+            --grafite: #1C1815;
+            --grafite-2: #2A2420;
+            --grafite-3: #3D352F;
+            --grafite-4: #4A433D;
+            --texto: #E8E2DA;
+            --texto-muted: #837A70;
+            --linha: #3D352F;
+            --verde-ok: #2C6E49;
+            --verde-claro: #4CAF50;
+            --erro: #D32F2F;
+            --erro-claro: #EF5350;
+
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-text: 'Inter', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--grafite);
+            color: var(--texto);
+            font-family: var(--font-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--grafite);
+            border-bottom: 1px solid var(--linha);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand svg { width: 32px; height: 32px; }
+        .brand span {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--texto-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--grafite-4);
+        }
+
+        .status-dot.online { background-color: var(--verde-claro); }
+        .status-dot.offline { background-color: var(--erro-claro); }
+
+        /* Main */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 32px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--texto-muted);
+            margin-bottom: 40px;
+        }
+
+        /* Project Selector */
+        .project-bar {
+            width: 100%;
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .project-bar input {
+            flex: 1;
+            background-color: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: var(--font-text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .project-bar input:focus {
+            border-color: var(--laranja);
+        }
+
+        .project-bar input::placeholder {
+            color: var(--texto-muted);
+        }
+
+        .btn-create {
+            background-color: var(--laranja);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .btn-create:hover { background-color: var(--laranja-brasa); }
+        .btn-create:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            width: 100%;
+            border: 2px dashed var(--grafite-4);
+            border-radius: 12px;
+            padding: 64px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: var(--grafite-2);
+            position: relative;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--laranja);
+            background-color: rgba(255, 90, 31, 0.03);
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--laranja);
+            background-color: rgba(255, 90, 31, 0.08);
+            transform: scale(1.01);
+        }
+
+        .drop-zone.uploading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .drop-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            color: var(--texto-muted);
+        }
+
+        .drop-zone:hover .drop-icon,
+        .drop-zone.dragover .drop-icon {
+            color: var(--laranja);
+        }
+
+        .drop-title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .drop-subtitle {
+            font-size: 13px;
+            color: var(--texto-muted);
+            margin-bottom: 16px;
+        }
+
+        .drop-formats {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .format-tag {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            background-color: var(--grafite-3);
+            color: var(--texto-muted);
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* File List */
+        .file-list {
+            width: 100%;
+            margin-top: 24px;
+        }
+
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .file-list-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .file-count {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--texto-muted);
+        }
+
+        .file-item {
+            background-color: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            border-color: var(--grafite-4);
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .file-icon.pdf { background-color: rgba(255, 90, 31, 0.15); color: var(--laranja); }
+        .file-icon.dwg { background-color: rgba(44, 110, 73, 0.15); color: var(--verde-claro); }
+        .file-icon.img { background-color: rgba(28, 78, 128, 0.15); color: #4A90D9; }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 12px;
+            color: var(--texto-muted);
+            font-family: var(--font-mono);
+            margin-top: 2px;
+        }
+
+        .file-progress {
+            width: 100%;
+            height: 3px;
+            background-color: var(--grafite-3);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .file-progress-bar {
+            height: 100%;
+            background-color: var(--laranja);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .file-status {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .file-status.uploading { color: var(--laranja); }
+        .file-status.done {
+            color: var(--verde-claro);
+            background-color: rgba(44, 110, 73, 0.15);
+        }
+        .file-status.error {
+            color: var(--erro-claro);
+            background-color: rgba(211, 47, 47, 0.15);
+        }
+
+        .file-remove {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background-color: transparent;
+            color: var(--texto-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .file-remove:hover {
+            background-color: rgba(211, 47, 47, 0.15);
+            color: var(--erro-claro);
+        }
+
+        /* Projects List */
+        .projects-section {
+            width: 100%;
+            margin-top: 48px;
+            border-top: 1px solid var(--linha);
+            padding-top: 32px;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .project-card {
+            background-color: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .project-card:hover {
+            border-color: var(--laranja);
+            transform: translateX(4px);
+        }
+
+        .project-card.active {
+            border-color: var(--laranja);
+            border-left: 3px solid var(--laranja);
+        }
+
+        .project-card-info h3 {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .project-card-info p {
+            font-size: 12px;
+            color: var(--texto-muted);
+            font-family: var(--font-mono);
+        }
+
+        .project-card-stats {
+            text-align: right;
+        }
+
+        .project-card-stats .count {
+            font-family: var(--font-mono);
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--laranja);
+        }
+
+        .project-card-stats .label {
+            font-size: 11px;
+            color: var(--texto-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--texto-muted);
+            font-size: 14px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background-color: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 14px 20px;
+            font-size: 13px;
+            color: var(--texto);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease;
+            min-width: 280px;
+        }
+
+        .toast.success { border-left: 3px solid var(--verde-claro); }
+        .toast.error { border-left: 3px solid var(--erro-claro); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--grafite); }
+        ::-webkit-scrollbar-thumb { background: var(--grafite-3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--texto-muted); }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .main { padding: 24px 16px; }
+            .project-bar { flex-direction: column; }
+            .drop-zone { padding: 40px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="brand">
+            <svg viewBox="0 0 100 100">
+                <polygon points="50,4 92,50 50,50" fill="#FF5A1F"/>
+                <polygon points="50,50 92,50 50,96" fill="#D9440F"/>
+                <polygon points="50,50 50,96 8,50" fill="#B8360B"/>
+                <polygon points="8,50 50,50 50,4" fill="#FF8A54"/>
+                <circle cx="50" cy="50" r="6" fill="#1C1815"/>
+            </svg>
+            <span>TRAÇO</span>
+        </div>
+        <div class="header-status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Conectando...</span>
+        </div>
+    </header>
+
+    <main class="main">
+        <h1 class="page-title">Upload de Plantas</h1>
+        <p class="page-subtitle">Envie plantas em PDF, DWG ou imagens para análise automática por IA</p>
+
+        <!-- Project Bar -->
+        <div class="project-bar">
+            <input type="text" id="projectName" placeholder="Nome do projeto (ex: Residencial Vila Nova)" />
+            <button class="btn-create" id="btnCreateProject" onclick="createProject()">+ Novo Projeto</button>
+        </div>
+
+        <!-- Current Project Indicator -->
+        <div id="currentProject" style="display:none; width:100%; margin-bottom:16px; padding:12px 16px; background:var(--grafite-2); border:1px solid var(--linha); border-left:3px solid var(--laranja); border-radius:8px; font-size:13px;">
+            <span style="color:var(--texto-muted);">Projeto ativo:</span>
+            <strong id="currentProjectName" style="color:#fff; margin-left:4px;"></strong>
+            <span id="currentProjectId" style="font-family:var(--font-mono); font-size:11px; color:var(--texto-muted); margin-left:8px;"></span>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" multiple accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png,.bmp,.tiff,.webp" />
+            <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <div class="drop-title">Arraste seus arquivos aqui</div>
+            <div class="drop-subtitle">ou clique para selecionar do computador</div>
+            <div class="drop-formats">
+                <span class="format-tag">PDF</span>
+                <span class="format-tag">DWG</span>
+                <span class="format-tag">DXF</span>
+                <span class="format-tag">JPG</span>
+                <span class="format-tag">PNG</span>
+                <span class="format-tag">TIFF</span>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div class="file-list" id="fileList" style="display:none;">
+            <div class="file-list-header">
+                <span class="file-list-title">Arquivos Enviados</span>
+                <span class="file-count" id="fileCount"></span>
+            </div>
+            <div id="fileItems"></div>
+        </div>
+
+        <!-- Projects List -->
+        <div class="projects-section">
+            <h2 class="section-title">Projetos Recentes</h2>
+            <div id="projectsList">
+                <div class="empty-state">Nenhum projeto criado ainda. Comece criando um novo projeto acima.</div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentProjectId = null;
+
+        // Health check
+        async function checkHealth() {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            try {
+                const resp = await fetch(`${API_BASE}/health`);
+                if (resp.ok) {
+                    dot.className = 'status-dot online';
+                    text.textContent = 'API online';
+                } else {
+                    throw new Error('not ok');
+                }
+            } catch {
+                dot.className = 'status-dot offline';
+                text.textContent = 'API offline';
+            }
+        }
+
+        checkHealth();
+        setInterval(checkHealth, 30000);
+
+        // Load projects on start
+        async function loadProjects() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/projects`);
+                if (!resp.ok) return;
+                const projects = await resp.json();
+                renderProjects(projects);
+            } catch {
+                // API offline
+            }
+        }
+
+        loadProjects();
+
+        function renderProjects(projects) {
+            const container = document.getElementById('projectsList');
+            if (!projects || projects.length === 0) {
+                container.innerHTML = '<div class="empty-state">Nenhum projeto criado ainda. Comece criando um novo projeto acima.</div>';
+                return;
+            }
+
+            container.innerHTML = projects.map(p => `
+                <div class="project-card ${p.id === currentProjectId ? 'active' : ''}"
+                     onclick="selectProject('${p.id}', '${escapeHtml(p.name)}')">
+                    <div class="project-card-info">
+                        <h3>${escapeHtml(p.name)}</h3>
+                        <p>${p.id} · ${new Date(p.created_at).toLocaleDateString('pt-BR')} · ${p.files.length} arquivo(s)</p>
+                    </div>
+                    <div class="project-card-stats">
+                        <div class="count">${p.files.length}</div>
+                        <div class="label">arquivos</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectProject(id, name) {
+            currentProjectId = id;
+            document.getElementById('currentProject').style.display = 'block';
+            document.getElementById('currentProjectName').textContent = name;
+            document.getElementById('currentProjectId').textContent = `#${id}`;
+            loadProjects();
+            loadProjectFiles(id);
+        }
+
+        async function loadProjectFiles(projectId) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/projects/${projectId}/files`);
+                if (!resp.ok) return;
+                const files = await resp.json();
+                renderFiles(files);
+            } catch {
+                // API offline
+            }
+        }
+
+        async function createProject() {
+            const nameInput = document.getElementById('projectName');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showToast('Informe o nome do projeto', 'error');
+                nameInput.focus();
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({ name });
+                const resp = await fetch(`${API_BASE}/api/projects?${params}`, {
+                    method: 'POST'
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Erro ao criar projeto');
+                }
+
+                const project = await resp.json();
+                showToast(`Projeto "${project.name}" criado com sucesso!`, 'success');
+
+                nameInput.value = '';
+                selectProject(project.id, project.name);
+                loadProjects();
+
+            } catch (err) {
+                showToast(err.message || 'Erro ao criar projeto', 'error');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Drag and drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover'].forEach(event => {
+            dropZone.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            fileInput.value = '';
+        });
+
+        function getFileIconClass(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'pdf';
+            if (['dwg', 'dxf'].includes(ext)) return 'dwg';
+            return 'img';
+        }
+
+        function getFileTypeLabel(filename) {
+            const ext = filename.split('.').pop().toUpperCase();
+            return ext;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function renderFiles(files) {
+            const fileList = document.getElementById('fileList');
+            const fileItems = document.getElementById('fileItems');
+            const fileCount = document.getElementById('fileCount');
+
+            if (!files || files.length === 0) {
+                fileList.style.display = 'none';
+                return;
+            }
+
+            fileList.style.display = 'block';
+            fileCount.textContent = `${files.length} arquivo(s)`;
+
+            fileItems.innerHTML = files.map(f => `
+                <div class="file-item" id="file-${f.filename}">
+                    <div class="file-icon ${getFileIconClass(f.original_name)}">
+                        ${getFileTypeLabel(f.original_name)}
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(f.original_name)}</div>
+                        <div class="file-meta">${formatFileSize(f.size)} · ${new Date(f.uploaded_at).toLocaleString('pt-BR')}</div>
+                    </div>
+                    <span class="file-status done" style="cursor:pointer; text-decoration:underline;" onclick="viewFile('${f.filename}', '${escapeHtml(f.original_name)}')">👁 ver</span>
+                    <button class="file-remove" onclick="removeFile('${f.filename}')" title="Remover">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function handleFiles(fileList) {
+            if (!currentProjectId) {
+                showToast('Crie ou selecione um projeto primeiro', 'error');
+                return;
+            }
+
+            const files = Array.from(fileList);
+            if (files.length === 0) return;
+
+            for (const file of files) {
+                await uploadFile(file);
+            }
+
+            // Refresh file list from server
+            loadProjectFiles(currentProjectId);
+            loadProjects();
+        }
+
+        async function uploadFile(file) {
+            const fileItems = document.getElementById('fileItems');
+            const fileList = document.getElementById('fileList');
+
+            // Show uploading state
+            fileList.style.display = 'block';
+            const tempId = 'upload-' + Date.now() + Math.random().toString(36).substr(2, 5);
+
+            const itemHtml = `
+                <div class="file-item" id="${tempId}">
+                    <div class="file-icon ${getFileIconClass(file.name)}">
+                        ${getFileTypeLabel(file.name)}
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-meta">${formatFileSize(file.size)} · enviando...</div>
+                        <div class="file-progress">
+                            <div class="file-progress-bar" id="progress-${tempId}" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <span class="file-status uploading">enviando</span>
+                </div>
+            `;
+
+            fileItems.insertAdjacentHTML('afterbegin', itemHtml);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const xhr = new XMLHttpRequest();
+
+                await new Promise((resolve, reject) => {
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            const bar = document.getElementById(`progress-${tempId}`);
+                            if (bar) bar.style.width = percent + '%';
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            showToast(`"${file.name}" enviado com sucesso!`, 'success');
+                            resolve();
+                        } else {
+                            try {
+                                const err = JSON.parse(xhr.responseText);
+                                reject(new Error(err.detail || 'Erro no upload'));
+                            } catch {
+                                reject(new Error('Erro no upload'));
+                            }
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => reject(new Error('Erro de conexão')));
+
+                    xhr.open('POST', `${API_BASE}/api/upload/${currentProjectId}`);
+                    xhr.send(formData);
+                });
+
+            } catch (err) {
+                showToast(`Erro ao enviar "${file.name}": ${err.message}`, 'error');
+            }
+        }
+
+        async function removeFile(filename) {
+            if (!currentProjectId) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/projects/${currentProjectId}/files/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (!resp.ok) throw new Error('Erro ao remover');
+
+                showToast('Arquivo removido', 'success');
+                loadProjectFiles(currentProjectId);
+                loadProjects();
+
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    ${type === 'success'
+                        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>'
+                        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>'}
+                </svg>
+                <span>${escapeHtml(message)}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Enter key creates project
+        document.getElementById('projectName').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') createProject();
+        });
+
+        function viewFile(filename, originalName) {
+            if (!currentProjectId) {
+                showToast('Selecione um projeto primeiro', 'error');
+                return;
+            }
+            window.open(`viewer.html?project=${currentProjectId}&file=${filename}`, '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRAÇO — Visualizador e Orçamento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --laranja: #FF5A1F;
+            --laranja-brasa: #D9440F;
+            --laranja-fogo: #B8360B;
+            --laranja-claro: #FFC9A6;
+            --laranja-vidro: #FFF0E6;
+            --grafite: #1C1815;
+            --grafite-2: #2A2420;
+            --grafite-3: #3D352F;
+            --grafite-4: #4A433D;
+            --texto: #E8E2DA;
+            --texto-muted: #837A70;
+            --linha: #3D352F;
+            --verde-ok: #2C6E49;
+            --verde-claro: #4CAF50;
+            --erro: #D32F2F;
+            --erro-claro: #EF5350;
+            --azul-info: #4A90D9;
+
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-text: 'Inter', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--grafite);
+            color: var(--texto);
+            font-family: var(--font-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--grafite);
+            border-bottom: 1px solid var(--linha);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand svg { width: 32px; height: 32px; }
+        .brand span {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-back {
+            background: none;
+            border: 1px solid var(--linha);
+            color: var(--texto);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: var(--font-display);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .header-back:hover {
+            border-color: var(--laranja);
+            color: var(--laranja);
+        }
+
+        /* Main Layout */
+        .main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            overflow: hidden;
+        }
+
+        /* Viewer Area */
+        .viewer-area {
+            position: relative;
+            background-color: #151210;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-image: radial-gradient(var(--grafite-3) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .viewer-container {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid var(--linha);
+            background: #fff;
+        }
+
+        .viewer-container img {
+            max-width: 100%;
+            max-height: 85vh;
+            display: block;
+        }
+
+        .viewer-placeholder {
+            text-align: center;
+            color: var(--texto-muted);
+        }
+
+        .viewer-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Sidebar / Info Panel */
+        .info-panel {
+            background-color: var(--grafite);
+            border-left: 1px solid var(--linha);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--linha);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--texto-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover { color: var(--texto); }
+        .panel-tab.active {
+            color: var(--laranja);
+            border-bottom-color: var(--laranja);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Metadata Groups */
+        .meta-group { margin-bottom: 28px; }
+
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--texto-muted);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--grafite-2);
+        }
+
+        .meta-row:last-child { border-bottom: none; }
+        .meta-name { font-size: 14px; color: var(--texto); }
+        .meta-value {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
+            text-align: right;
+        }
+        .meta-value.highlight { color: var(--laranja); }
+
+        /* Analysis & Budget Controls */
+        .control-group {
+            background: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .control-row:last-child { margin-bottom: 0; }
+
+        .control-field { flex: 1; }
+        .control-field label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--texto-muted);
+            margin-bottom: 6px;
+        }
+
+        .control-field select,
+        .control-field input {
+            width: 100%;
+            background: var(--grafite-3);
+            border: 1px solid var(--linha);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-family: var(--font-text);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .control-field select:focus,
+        .control-field input:focus { border-color: var(--laranja); }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary { background-color: var(--laranja); color: #fff; }
+        .btn-primary:hover { background-color: var(--laranja-brasa); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-secondary {
+            background-color: var(--grafite-3);
+            color: var(--texto);
+            border: 1px solid var(--linha);
+        }
+        .btn-secondary:hover { border-color: var(--laranja); color: var(--laranja); }
+
+        /* Budget Table */
+        .budget-summary {
+            background: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .budget-total {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--laranja);
+            margin-bottom: 4px;
+        }
+
+        .budget-subtitle {
+            font-size: 12px;
+            color: var(--texto-muted);
+            font-family: var(--font-mono);
+        }
+
+        .budget-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .budget-item {
+            background: var(--grafite-2);
+            border: 1px solid var(--linha);
+            border-radius: 6px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .budget-item-desc {
+            flex: 1;
+            color: var(--texto);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 12px;
+        }
+
+        .budget-item-qty {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--texto-muted);
+            margin-right: 12px;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .budget-item-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: #fff;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .budget-item-edit {
+            margin-left: 12px;
+            background: none;
+            border: none;
+            color: var(--texto-muted);
+            cursor: pointer;
+            padding: 4px;
+        }
+        .budget-item-edit:hover { color: var(--laranja); }
+
+        /* Loading & Status */
+        .loading { text-align: center; padding: 40px; }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid var(--grafite-3);
+            border-top-color: var(--laranja);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-badge.pending { background: rgba(255,90,31,0.15); color: var(--laranja); }
+        .status-badge.done { background: rgba(44,110,73,0.15); color: var(--verde-claro); }
+        .status-badge.error { background: rgba(211,47,47,0.15); color: var(--erro-claro); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--grafite); }
+        ::-webkit-scrollbar-thumb { background: var(--grafite-3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--texto-muted); }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            .info-panel { border-left: none; border-top: 1px solid var(--linha); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="brand">
+            <svg viewBox="0 0 100 100">
+                <polygon points="50,4 92,50 50,50" fill="#FF5A1F"/>
+                <polygon points="50,50 92,50 50,96" fill="#D9440F"/>
+                <polygon points="50,50 50,96 8,50" fill="#B8360B"/>
+                <polygon points="8,50 50,50 50,4" fill="#FF8A54"/>
+                <circle cx="50" cy="50" r="6" fill="#1C1815"/>
+            </svg>
+            <span>TRAÇO</span>
+        </div>
+        <div class="header-actions">
+            <div id="analysisStatus" class="status-badge pending" style="display:none;">
+                <span>●</span> <span id="analysisStatusText">Pendente</span>
+            </div>
+            <button class="header-back" onclick="goBack()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Voltar
+            </button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="viewer-area" id="viewerArea">
+            <div class="viewer-placeholder" id="viewerPlaceholder">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <div>Carregando visualização...</div>
+            </div>
+            <div class="viewer-container" id="viewerContainer" style="display:none;"></div>
+        </div>
+
+        <aside class="info-panel">
+            <div class="panel-tabs">
+                <div class="panel-tab active" onclick="switchTab('metadata')">Arquivo</div>
+                <div class="panel-tab" onclick="switchTab('analysis')">Análise IA</div>
+                <div class="panel-tab" onclick="switchTab('budget')">Orçamento</div>
+            </div>
+
+            <!-- Tab: Metadata -->
+            <div class="panel-content">
+                <div id="tab-metadata" class="tab-pane active">
+                    <div class="loading" id="metaLoading">
+                        <div class="spinner"></div>
+                        <div>Carregando metadados...</div>
+                    </div>
+                    <div id="metaContent" style="display:none;"></div>
+                </div>
+
+                <!-- Tab: Analysis -->
+                <div id="tab-analysis" class="tab-pane">
+                    <div class="control-group">
+                        <div class="meta-label">Configuração da Análise</div>
+                        <div class="control-row">
+                            <div class="control-field">
+                                <label>Região</label>
+                                <select id="analysisRegiao">
+                                    <option value="SP">São Paulo</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="DF">Distrito Federal</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()">
+                            Analisar Planta com IA
+                        </button>
+                        <p style="margin-top:12px; font-size:12px; color:var(--texto-muted); line-height:1.5;">
+                            A análise detecta paredes, portas, janelas e ambientes automaticamente usando visão computacional.
+                            Disponível apenas para imagens (JPG, PNG).
+                        </p>
+                    </div>
+
+                    <div id="analysisResult" style="display:none;">
+                        <div class="meta-group">
+                            <div class="meta-label">Resumo da Detecção</div>
+                            <div id="analysisSummary"></div>
+                        </div>
+                        <div class="meta-group">
+                            <div class="meta-label">Escala Estimada</div>
+                            <div id="analysisScale"></div>
+                        </div>
+                    </div>
+
+                    <div id="analysisLoading" class="loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <div>Analisando planta...</div>
+                        <div style="font-size:12px; color:var(--texto-muted); margin-top:8px;">Isso pode levar alguns segundos</div>
+                    </div>
+
+                    <div id="analysisError" style="display:none;">
+                        <div class="meta-group">
+                            <div class="meta-label">Erro na Análise</div>
+                            <div class="meta-row">
+                                <span class="meta-name" style="color:var(--erro-claro);" id="analysisErrorMsg"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Budget -->
+                <div id="tab-budget" class="tab-pane">
+                    <div id="budgetControls" class="control-group">
+                        <div class="meta-label">Gerar Orçamento SINAPI</div>
+                        <div class="control-row">
+                            <div class="control-field">
+                                <label>Região</label>
+                                <select id="budgetRegiao">
+                                    <option value="SP">São Paulo</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="DF">Distrito Federal</option>
+                                </select>
+                            </div>
+                            <div class="control-field">
+                                <label>Piso</label>
+                                <select id="budgetFloor">
+                                    <option value="piso_ceramico">Cerâmico</option>
+                                    <option value="porcelanato">Porcelanato</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="control-row">
+                            <div class="control-field">
+                                <label>Porta</label>
+                                <select id="budgetDoor">
+                                    <option value="porta_leve">Leve</option>
+                                    <option value="porta_pesada">Pesada</option>
+                                </select>
+                            </div>
+                            <div class="control-field">
+                                <label style="display:flex; align-items:center; gap:8px; margin-top:18px; cursor:pointer;">
+                                    <input type="checkbox" id="budgetDesonerado" style="width:auto;">
+                                    Desonerado
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btnGenerateBudget" onclick="generateBudget()">
+                            Gerar Orçamento
+                        </button>
+                        <p style="margin-top:12px; font-size:12px; color:var(--texto-muted); line-height:1.5;">
+                            Requer análise prévia da planta. Preços baseados no SINAPI com BDI conforme TCU.
+                        </p>
+                    </div>
+
+                    <div id="budgetResult" style="display:none;">
+                        <div class="budget-summary">
+                            <div class="budget-total" id="budgetTotal">R$ 0,00</div>
+                            <div class="budget-subtitle" id="budgetMeta">BDI: -- | Região: --</div>
+                        </div>
+
+                        <div class="meta-label">Itens do Orçamento</div>
+                        <div class="budget-items-list" id="budgetItemsList"></div>
+                    </div>
+
+                    <div id="budgetLoading" class="loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <div>Gerando orçamento...</div>
+                    </div>
+
+                    <div id="budgetError" style="display:none;">
+                        <div class="meta-group">
+                            <div class="meta-label">Erro</div>
+                            <div class="meta-row">
+                                <span class="meta-name" style="color:var(--erro-claro);" id="budgetErrorMsg"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const params = new URLSearchParams(window.location.search);
+        const projectId = params.get('project');
+        const filename = params.get('file');
+
+        let currentAnalysis = null;
+        let currentBudget = null;
+
+        if (!projectId || !filename) {
+            alert('Parâmetros inválidos. Retornando...');
+            window.location.href = 'index.html';
+        }
+
+        // --- Tab Switching ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // --- Load File Data ---
+        async function loadFileData() {
+            try {
+                const filesResp = await fetch(`${API_BASE}/api/projects/${projectId}/files`);
+                if (!filesResp.ok) throw new Error('Erro ao carregar arquivos');
+                const files = await filesResp.json();
+
+                const fileData = files.find(f => f.filename === filename);
+                if (!fileData) throw new Error('Arquivo não encontrado');
+
+                // Load metadata
+                const metaResp = await fetch(`${API_BASE}/api/projects/${projectId}/files/${filename}/metadata`);
+                let metadata = {};
+                if (metaResp.ok) {
+                    metadata = await metaResp.json();
+                }
+
+                document.getElementById('metaLoading').style.display = 'none';
+                document.getElementById('metaContent').style.display = 'block';
+                renderMetadata(metadata, fileData);
+                renderViewer(fileData, metadata);
+
+                // Check if analysis already exists
+                await checkExistingAnalysis();
+
+            } catch (err) {
+                document.getElementById('metaLoading').innerHTML =
+                    `<div style="color:var(--erro-claro);">${err.message}</div>`;
+            }
+        }
+
+        async function checkExistingAnalysis() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/projects/${projectId}/analysis/${filename}`);
+                if (resp.ok) {
+                    currentAnalysis = await resp.json();
+                    showAnalysisResult(currentAnalysis);
+                    updateStatusBadge('analyzed');
+                }
+            } catch {
+                // No analysis yet
+            }
+
+            // Check existing budget
+            try {
+                const resp = await fetch(`${API_BASE}/api/projects/${projectId}/budget`);
+                if (resp.ok) {
+                    currentBudget = await resp.json();
+                    showBudgetResult(currentBudget);
+                    updateStatusBadge('budget');
+                }
+            } catch {
+                // No budget yet
+            }
+        }
+
+        function updateStatusBadge(state) {
+            const badge = document.getElementById('analysisStatus');
+            const text = document.getElementById('analysisStatusText');
+            badge.style.display = 'inline-flex';
+
+            if (state === 'budget') {
+                badge.className = 'status-badge done';
+                text.textContent = 'Orçamento gerado';
+            } else if (state === 'analyzed') {
+                badge.className = 'status-badge done';
+                text.textContent = 'Análise concluída';
+            } else {
+                badge.className = 'status-badge pending';
+                text.textContent = 'Pendente';
+            }
+        }
+
+        function renderMetadata(metadata, fileData) {
+            const panel = document.getElementById('metaContent');
+            let html = '';
+
+            html += '<div class="meta-group"><div class="meta-label">Informações Gerais</div>';
+            html += `<div class="meta-row"><span class="meta-name">Tipo</span><span class="meta-value">${fileData.file_type.toUpperCase()}</span></div>`;
+            html += `<div class="meta-row"><span class="meta-name">Tamanho</span><span class="meta-value">${formatFileSize(fileData.size)}</span></div>`;
+            html += `<div class="meta-row"><span class="meta-name">Upload</span><span class="meta-value">${new Date(fileData.uploaded_at).toLocaleString('pt-BR')}</span></div>`;
+            html += '</div>';
+
+            if (metadata.type === 'image') {
+                html += '<div class="meta-group"><div class="meta-label">Dimensões</div>';
+                html += `<div class="meta-row"><span class="meta-name">Largura</span><span class="meta-value">${metadata.width} px</span></div>`;
+                html += `<div class="meta-row"><span class="meta-name">Altura</span><span class="meta-value">${metadata.height} px</span></div>`;
+                if (metadata.dpi) {
+                    html += `<div class="meta-row"><span class="meta-name">DPI</span><span class="meta-value highlight">${metadata.dpi[0]} × ${metadata.dpi[1]}</span></div>`;
+                }
+                html += '</div>';
+            }
+
+            if (metadata.type === 'pdf') {
+                html += '<div class="meta-group"><div class="meta-label">PDF</div>';
+                html += `<div class="meta-row"><span class="meta-name">Páginas</span><span class="meta-value highlight">${metadata.page_count}</span></div>`;
+                html += '</div>';
+            }
+
+            panel.innerHTML = html;
+        }
+
+        function renderViewer(fileData, metadata) {
+            const container = document.getElementById('viewerContainer');
+            const placeholder = document.getElementById('viewerPlaceholder');
+
+            placeholder.style.display = 'none';
+            container.style.display = 'block';
+
+            if (fileData.file_type === 'image' && fileData.thumbnail_url) {
+                container.innerHTML = `<img src="${API_BASE}${fileData.thumbnail_url}" alt="${fileData.original_name}" />`;
+            } else if (fileData.file_type === 'pdf') {
+                container.innerHTML = `
+                    <div style="width:600px; height:400px; background:#fff; display:flex; align-items:center; justify-content:center; color:#666; flex-direction:column;">
+                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:16px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div style="font-size:18px; font-weight:600; margin-bottom:8px;">${fileData.original_name}</div>
+                        <div style="font-size:14px;">${metadata.page_count || '?'} páginas</div>
+                        <button onclick="window.open('${API_BASE}/uploads/${projectId}/${filename}', '_blank')" style="margin-top:16px; padding:10px 20px; background:#FF5A1F; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:var(--font-display); font-weight:600;">Abrir PDF</button>
+                    </div>`;
+            } else {
+                container.innerHTML = `
+                    <div style="width:600px; height:400px; background:#fff; display:flex; align-items:center; justify-content:center; color:#666; flex-direction:column;">
+                        <div style="font-size:18px; font-weight:600; margin-bottom:8px;">${fileData.original_name}</div>
+                        <button onclick="window.open('${API_BASE}/uploads/${projectId}/${filename}', '_blank')" style="margin-top:16px; padding:10px 20px; background:#FF5A1F; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:var(--font-display); font-weight:600;">Download</button>
+                    </div>`;
+            }
+        }
+
+        // --- Analysis ---
+        async function runAnalysis() {
+            const btn = document.getElementById('btnAnalyze');
+            const loading = document.getElementById('analysisLoading');
+            const result = document.getElementById('analysisResult');
+            const error = document.getElementById('analysisError');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+
+            try {
+                const regiao = document.getElementById('analysisRegiao').value;
+                const resp = await fetch(
+                    `${API_BASE}/api/projects/${projectId}/analyze/${filename}?regiao=${regiao}`,
+                    { method: 'POST' }
+                );
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Erro na análise');
+                }
+
+                const data = await resp.json();
+                currentAnalysis = data.analysis;
+                showAnalysisResult(currentAnalysis);
+                updateStatusBadge('analyzed');
+
+            } catch (err) {
+                document.getElementById('analysisErrorMsg').textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showAnalysisResult(analysis) {
+            const resultDiv = document.getElementById('analysisResult');
+            const summaryDiv = document.getElementById('analysisSummary');
+            const scaleDiv = document.getElementById('analysisScale');
+
+            resultDiv.style.display = 'block';
+
+            const summary = analysis.summary || {};
+            summaryDiv.innerHTML = `
+                <div class="meta-row"><span class="meta-name">Paredes</span><span class="meta-value highlight">${summary.total_walls || 0}</span></div>
+                <div class="meta-row"><span class="meta-name">Portas</span><span class="meta-value">${summary.total_doors || 0}</span></div>
+                <div class="meta-row"><span class="meta-name">Janelas</span><span class="meta-value">${summary.total_windows || 0}</span></div>
+                <div class="meta-row"><span class="meta-name">Ambientes</span><span class="meta-value">${summary.total_rooms || 0}</span></div>
+                <div class="meta-row"><span class="meta-name">Área Total Est.</span><span class="meta-value highlight">${summary.total_area_m2 || 0} m²</span></div>
+            `;
+
+            const scale = analysis.scale || {};
+            scaleDiv.innerHTML = `
+                <div class="meta-row"><span class="meta-name">Método</span><span class="meta-value">${scale.method || 'N/A'}</span></div>
+                <div class="meta-row"><span class="meta-name">Confiança</span><span class="meta-value highlight">${scale.confidence ? (scale.confidence * 100).toFixed(0) + '%' : 'N/A'}</span></div>
+                <div class="meta-row"><span class="meta-name">Referência</span><span class="meta-value" style="font-size:11px;">${scale.reference || 'N/A'}</span></div>
+            `;
+
+            // Update button text
+            document.getElementById('btnAnalyze').textContent = 'Re-analisar Planta';
+        }
+
+        // --- Budget ---
+        async function generateBudget() {
+            if (!currentAnalysis) {
+                alert('É necessário analisar a planta primeiro. Vá para a aba "Análise IA".');
+                switchTabByName('analysis');
+                return;
+            }
+
+            const btn = document.getElementById('btnGenerateBudget');
+            const loading = document.getElementById('budgetLoading');
+            const result = document.getElementById('budgetResult');
+            const error = document.getElementById('budgetError');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+
+            try {
+                const regiao = document.getElementById('budgetRegiao').value;
+                const floorType = document.getElementById('budgetFloor').value;
+                const doorType = document.getElementById('budgetDoor').value;
+                const desonerado = document.getElementById('budgetDesonerado').checked;
+
+                const overrides = {
+                    floor_type: floorType,
+                    door_type: doorType
+                };
+
+                const queryParams = new URLSearchParams({
+                    filename: filename,
+                    regiao: regiao,
+                    desonerado: desonerado
+                });
+
+                const resp = await fetch(
+                    `${API_BASE}/api/projects/${projectId}/budget?${queryParams}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(overrides)
+                    }
+                );
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Erro ao gerar orçamento');
+                }
+
+                const data = await resp.json();
+                currentBudget = data.budget;
+                showBudgetResult(currentBudget);
+                updateStatusBadge('budget');
+
+            } catch (err) {
+                document.getElementById('budgetErrorMsg').textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showBudgetResult(budget) {
+            const resultDiv = document.getElementById('budgetResult');
+            const totalEl = document.getElementById('budgetTotal');
+            const metaEl = document.getElementById('budgetMeta');
+            const itemsList = document.getElementById('budgetItemsList');
+
+            resultDiv.style.display = 'block';
+
+            const resumo = budget.resumo || {};
+            totalEl.textContent = formatCurrency(resumo.valor_total || 0);
+            metaEl.textContent = `BDI: ${resumo.bdi_aplicado || '--'} | Região: ${resumo.regiao || '--'} | ${resumo.quantidade_itens || 0} itens`;
+
+            // Render items
+            const itens = budget.itens || [];
+            itemsList.innerHTML = itens.map((item, idx) => `
+                <div class="budget-item">
+                    <span class="budget-item-desc" title="${escapeHtml(item.descricao)}">${escapeHtml(item.descricao)}</span>
+                    <span class="budget-item-qty">${item.quantidade.toFixed(2)} ${item.unidade}</span>
+                    <span class="budget-item-val">${formatCurrency(item.custo_total)}</span>
+                    <button class="budget-item-edit" onclick="editBudgetItem(${idx})" title="Editar">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+
+            document.getElementById('btnGenerateBudget').textContent = 'Recalcular Orçamento';
+        }
+
+        async function editBudgetItem(index) {
+            const item = currentBudget?.itens?.[index];
+            if (!item) return;
+
+            const newQty = prompt(`Quantidade atual: ${item.quantidade}\nNova quantidade:`, item.quantidade);
+            if (newQty === null) return;
+
+            const qty = parseFloat(newQty);
+            if (isNaN(qty) || qty <= 0) {
+                alert('Valor inválido');
+                return;
+            }
+
+            try {
+                const resp = await fetch(
+                    `${API_BASE}/api/projects/${projectId}/budget/edit/${index}`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quantidade: qty })
+                    }
+                );
+
+                if (!resp.ok) throw new Error('Erro ao editar');
+
+                // Reload budget
+                const budgetResp = await fetch(`${API_BASE}/api/projects/${projectId}/budget`);
+                if (budgetResp.ok) {
+                    currentBudget = await budgetResp.json();
+                    showBudgetResult(currentBudget);
+                }
+
+            } catch (err) {
+                alert('Erro: ' + err.message);
+            }
+        }
+
+        // --- Utilities ---
+        function switchTabByName(name) {
+            const tabs = document.querySelectorAll('.panel-tab');
+            const panes = document.querySelectorAll('.tab-pane');
+            tabs.forEach(t => t.classList.remove('active'));
+            panes.forEach(p => p.classList.remove('active'));
+
+            const tabMap = { metadata: 0, analysis: 1, budget: 2 };
+            if (tabs[tabMap[name]]) tabs[tabMap[name]].classList.add('active');
+            const pane = document.getElementById(`tab-${name}`);
+            if (pane) pane.classList.add('active');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // Init
+        loadFileData();
+    </script>
+</body>
+</html>
