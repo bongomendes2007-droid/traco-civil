@@ -16,12 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import uvicorn
-
-from processors import process_file, save_processing_result
-from vision import PlantAnalyzer
-from sinapi import CompositionMapper
-from editor import BudgetEditor
 
 # Configuração
 BASE_DIR = Path(__file__).parent
@@ -42,7 +36,7 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 app = FastAPI(
     title="TRAÇO API",
     description="API para upload e processamento de plantas arquitetônicas",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 # CORS para o frontend
@@ -56,6 +50,32 @@ app.add_middleware(
 
 # Servir arquivos estáticos (uploads e thumbnails)
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
+
+# Lazy imports para módulos pesados (opencv, numpy)
+def get_processors():
+    from processors import process_file, save_processing_result
+    return process_file, save_processing_result
+
+
+def get_analyzer():
+    from vision import PlantAnalyzer
+    return PlantAnalyzer
+
+
+def get_composition_mapper():
+    from sinapi import CompositionMapper
+    return CompositionMapper
+
+
+def get_sinapi_importer():
+    from sinapi import SinapiImporter
+    return SinapiImporter
+
+
+def get_budget_editor():
+    from editor import BudgetEditor
+    return BudgetEditor
 
 
 class Project(BaseModel):
@@ -92,16 +112,14 @@ def validate_file(file: UploadFile):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Nome do arquivo inválido")
 
-    # Verifica extensão
     try:
         get_file_type(file.filename)
     except HTTPException:
         raise
 
-    # Verifica tamanho (leitura parcial)
-    file.file.seek(0, 2)  # Vai para o final
+    file.file.seek(0, 2)
     size = file.file.tell()
-    file.file.seek(0)  # Volta para o início
+    file.file.seek(0)
 
     if size > MAX_FILE_SIZE:
         raise HTTPException(
@@ -113,22 +131,22 @@ def validate_file(file: UploadFile):
 @app.get("/")
 async def root():
     return {
-        "message": "TRAÇO API - Sistema de Orçamento Inteligente",
-        "version": "0.2.0",
+        "message": "TRAÇO CIVIL API - Sistema de Orçamento Inteligente",
+        "version": "0.3.0",
+        "status": "online",
         "endpoints": {
+            "health": "/health",
             "projects": "/api/projects",
             "upload": "/api/upload/{project_id}",
-            "project_files": "/api/projects/{project_id}/files",
-            "file_metadata": "/api/projects/{project_id}/files/{filename}/metadata",
-            "file_thumbnail": "/api/projects/{project_id}/files/{filename}/thumbnail",
-            "health": "/health"
+            "sinapi_services": "/api/sinapi/services",
+            "docs": "/docs"
         }
     }
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now().isoformat(), "version": "0.3.0"}
 
 
 @app.post("/api/projects")
@@ -147,7 +165,6 @@ async def create_project(name: str, description: Optional[str] = None):
         "files": []
     }
 
-    # Salva metadados do projeto
     with open(project_dir / "project.json", "w", encoding="utf-8") as f:
         json.dump(project_data, f, indent=2, ensure_ascii=False)
 
@@ -184,34 +201,26 @@ async def upload_file(project_id: str, file: UploadFile = File(...)):
     """
     Faz upload de um arquivo para um projeto específico.
     Suporta: PDF, DWG, DXF, e imagens (JPG, PNG, etc.)
-    Processa automaticamente o arquivo após o upload para extrair metadados.
     """
-    # Verifica se o projeto existe
     project_file = PROJECTS_DIR / project_id / "project.json"
     if not project_file.exists():
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    # Valida o arquivo
     validate_file(file)
 
-    # Cria diretório de uploads do projeto
     project_upload_dir = UPLOAD_DIR / project_id
     project_upload_dir.mkdir(exist_ok=True)
 
-    # Gera nome único
     file_ext = Path(file.filename).suffix.lower()
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = project_upload_dir / unique_filename
 
-    # Salva o arquivo
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Obtém informações do arquivo
     file_size = file_path.stat().st_size
     file_type = get_file_type(file.filename)
 
-    # Cria registro do arquivo
     file_record = {
         "filename": unique_filename,
         "original_name": file.filename,
@@ -224,18 +233,16 @@ async def upload_file(project_id: str, file: UploadFile = File(...)):
         "processing_status": "pending"
     }
 
-    # Processa o arquivo automaticamente (extrai metadados, gera thumbnail, etc.)
+    # Processa o arquivo (lazy import)
     try:
+        process_file, save_processing_result = get_processors()
         project_dir = PROJECTS_DIR / project_id
         processing_result = process_file(str(file_path), str(project_dir))
-
-        # Salva resultado do processamento
         metadata_path = save_processing_result(str(project_dir), unique_filename, processing_result)
 
         file_record["processing_status"] = "completed" if not processing_result.get("error") else "error"
         file_record["metadata_file"] = metadata_path
 
-        # Adiciona thumbnail URL se disponível
         if processing_result.get("thumbnail"):
             file_record["thumbnail_url"] = f"/api/projects/{project_id}/files/{unique_filename}/thumbnail"
 
@@ -243,7 +250,6 @@ async def upload_file(project_id: str, file: UploadFile = File(...)):
         file_record["processing_status"] = "error"
         file_record["processing_error"] = str(e)
 
-    # Atualiza metadados do projeto
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
@@ -270,7 +276,6 @@ async def delete_file(project_id: str, filename: str):
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
-    # Localiza o arquivo na lista
     file_record = None
     for f in project_data["files"]:
         if f["filename"] == filename:
@@ -280,18 +285,15 @@ async def delete_file(project_id: str, filename: str):
     if not file_record:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 
-    # Remove da lista
     project_data["files"] = [
         f for f in project_data["files"]
         if f["filename"] != filename
     ]
 
-    # Remove o arquivo físico
     file_path = UPLOAD_DIR / project_id / filename
     if file_path.exists():
         file_path.unlink()
 
-    # Remove metadados processados
     project_dir = PROJECTS_DIR / project_id
     processing_dir = project_dir / "processing"
     if processing_dir.exists():
@@ -299,13 +301,11 @@ async def delete_file(project_id: str, filename: str):
         for meta_file in processing_dir.glob(f"{stem}*"):
             meta_file.unlink()
 
-    # Remove thumbnail
     thumbs_dir = project_dir / "thumbnails"
     if thumbs_dir.exists():
         for thumb in thumbs_dir.glob(f"{stem}*"):
             thumb.unlink()
 
-    # Atualiza projeto
     project_data["updated_at"] = datetime.now().isoformat()
     with open(project_file, "w", encoding="utf-8") as f:
         json.dump(project_data, f, indent=2, ensure_ascii=False)
@@ -328,15 +328,11 @@ async def list_project_files(project_id: str):
 
 @app.get("/api/projects/{project_id}/files/{filename}/metadata")
 async def get_file_metadata(project_id: str, filename: str):
-    """
-    Retorna os metadados extraídos automaticamente de um arquivo.
-    Inclui dimensões, DPI, número de páginas, layers (DXF), etc.
-    """
+    """Retorna os metadados extraídos automaticamente de um arquivo."""
     project_file = PROJECTS_DIR / project_id / "project.json"
     if not project_file.exists():
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    # Verifica se o arquivo pertence ao projeto
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
@@ -349,7 +345,6 @@ async def get_file_metadata(project_id: str, filename: str):
     if not file_record:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado no projeto")
 
-    # Lê metadados processados
     project_dir = PROJECTS_DIR / project_id
     processing_dir = project_dir / "processing"
     stem = Path(filename).stem
@@ -358,7 +353,7 @@ async def get_file_metadata(project_id: str, filename: str):
     if not meta_file.exists():
         return {
             "status": "not_processed",
-            "message": "Metadados ainda não disponíveis. O arquivo pode estar em processamento."
+            "message": "Metadados ainda não disponíveis."
         }
 
     with open(meta_file, "r", encoding="utf-8") as f:
@@ -367,14 +362,11 @@ async def get_file_metadata(project_id: str, filename: str):
 
 @app.get("/api/projects/{project_id}/files/{filename}/thumbnail")
 async def get_file_thumbnail(project_id: str, filename: str):
-    """
-    Retorna o thumbnail gerado automaticamente para imagens e PDFs.
-    """
+    """Retorna o thumbnail gerado automaticamente para imagens e PDFs."""
     project_file = PROJECTS_DIR / project_id / "project.json"
     if not project_file.exists():
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    # Verifica se o arquivo pertence ao projeto
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
@@ -387,12 +379,10 @@ async def get_file_thumbnail(project_id: str, filename: str):
     if not file_record:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado no projeto")
 
-    # Localiza thumbnail
     project_dir = PROJECTS_DIR / project_id
     thumbs_dir = project_dir / "thumbnails"
     stem = Path(filename).stem
 
-    # Procura por qualquer thumbnail correspondente
     thumb_candidates = list(thumbs_dir.glob(f"{stem}*")) if thumbs_dir.exists() else []
 
     if not thumb_candidates:
@@ -407,11 +397,7 @@ async def get_file_thumbnail(project_id: str, filename: str):
 
 @app.post("/api/projects/{project_id}/reprocess/{filename}")
 async def reprocess_file(project_id: str, filename: str):
-    """
-    Reprocessa um arquivo para extrair metadados novamente.
-    Útil quando o processamento falhou ou quando atualizações nos
-    algoritmos de extração ficam disponíveis.
-    """
+    """Reprocessa um arquivo para extrair metadados novamente."""
     project_file = PROJECTS_DIR / project_id / "project.json"
     if not project_file.exists():
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
@@ -419,7 +405,6 @@ async def reprocess_file(project_id: str, filename: str):
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
-    # Localiza o arquivo
     file_record = None
     for f in project_data["files"]:
         if f["filename"] == filename:
@@ -429,18 +414,16 @@ async def reprocess_file(project_id: str, filename: str):
     if not file_record:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 
-    # Verifica se o arquivo físico ainda existe
     file_path = UPLOAD_DIR / project_id / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
 
-    # Reprocessa
     try:
+        process_file, save_processing_result = get_processors()
         project_dir = PROJECTS_DIR / project_id
         processing_result = process_file(str(file_path), str(project_dir))
         metadata_path = save_processing_result(str(project_dir), filename, processing_result)
 
-        # Atualiza registro
         file_record["processing_status"] = "completed" if not processing_result.get("error") else "error"
         file_record["metadata_file"] = metadata_path
         file_record["reprocessed_at"] = datetime.now().isoformat()
@@ -448,7 +431,6 @@ async def reprocess_file(project_id: str, filename: str):
         if processing_result.get("thumbnail"):
             file_record["thumbnail_url"] = f"/api/projects/{project_id}/files/{filename}/thumbnail"
 
-        # Salva projeto
         with open(project_file, "w", encoding="utf-8") as f:
             json.dump(project_data, f, indent=2, ensure_ascii=False)
 
@@ -474,7 +456,6 @@ async def analyze_plant(project_id: str, filename: str, regiao: str = "SP"):
     with open(project_file, "r", encoding="utf-8") as f:
         project_data = json.load(f)
 
-    # Localiza o arquivo
     file_record = None
     for f in project_data["files"]:
         if f["filename"] == filename:
@@ -484,25 +465,22 @@ async def analyze_plant(project_id: str, filename: str, regiao: str = "SP"):
     if not file_record:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
 
-    # Verifica se é uma imagem (análise só funciona em imagens)
     if file_record["file_type"] != "image":
         raise HTTPException(
             status_code=400,
             detail="Análise de visão computacional disponível apenas para imagens (JPG, PNG, etc.)"
         )
 
-    # Caminho do arquivo
     file_path = UPLOAD_DIR / project_id / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
 
-    # Executa análise
     try:
+        PlantAnalyzer = get_analyzer()
         project_dir = PROJECTS_DIR / project_id
         analyzer = PlantAnalyzer()
         analysis_result = analyzer.analyze(str(file_path), str(project_dir))
 
-        # Atualiza projeto
         project_data["status"] = "analyzed"
         project_data["updated_at"] = datetime.now().isoformat()
 
@@ -528,19 +506,11 @@ async def generate_budget(
 ):
     """
     Gera orçamento completo baseado na análise da planta e dados SINAPI.
-
-    Args:
-        filename: Nome do arquivo da planta analisada
-        regiao: Código da região (SP, RJ, MG, etc.)
-        desonerado: Se True, aplica encargos com desoneração
-        overrides: Dicionário para sobrescrever padrões:
-                   {"floor_type": "porcelanato", "door_type": "porta_pesada"}
     """
     project_file = PROJECTS_DIR / project_id / "project.json"
     if not project_file.exists():
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    # Carrega análise da planta
     project_dir = PROJECTS_DIR / project_id
     stem = Path(filename).stem
     analysis_file = project_dir / "analysis" / f"{stem}_analysis.json"
@@ -548,18 +518,17 @@ async def generate_budget(
     if not analysis_file.exists():
         raise HTTPException(
             status_code=400,
-            detail="Análise não encontrada. Execute primeiro /api/projects/{project_id}/analyze/{filename}"
+            detail="Análise não encontrada. Execute primeiro a análise da planta."
         )
 
     with open(analysis_file, "r", encoding="utf-8") as f:
         analysis_result = json.load(f)
 
-    # Gera orçamento
     try:
+        CompositionMapper = get_composition_mapper()
         mapper = CompositionMapper(regiao=regiao, desonerado=desonerado)
         budget = mapper.generate_budget(analysis_result, overrides)
 
-        # Salva orçamento
         budget_dir = project_dir / "budget"
         budget_dir.mkdir(exist_ok=True)
         budget_file = budget_dir / f"{project_id}_budget.json"
@@ -567,7 +536,6 @@ async def generate_budget(
         with open(budget_file, "w", encoding="utf-8") as f:
             json.dump(budget, f, indent=2, ensure_ascii=False, default=str)
 
-        # Atualiza projeto
         with open(project_file, "r", encoding="utf-8") as f:
             project_data = json.load(f)
 
@@ -616,15 +584,9 @@ async def get_budget(project_id: str):
 
 @app.put("/api/projects/{project_id}/budget/edit/{item_index}")
 async def edit_budget_item(project_id: str, item_index: int, updates: dict):
-    """
-    Edita um item específico do orçamento.
-
-    Args:
-        item_index: Índice do item na lista (0-based)
-        updates: Dicionário com campos a atualizar
-                 Ex: {"quantidade": 15.5, "custo_unit_direto": 45.00}
-    """
+    """Edita um item específico do orçamento."""
     project_dir = PROJECTS_DIR / project_id
+    BudgetEditor = get_budget_editor()
     editor = BudgetEditor(str(project_dir))
 
     result = editor.edit_budget_item(project_id, item_index, updates)
@@ -637,20 +599,9 @@ async def edit_budget_item(project_id: str, item_index: int, updates: dict):
 
 @app.post("/api/projects/{project_id}/budget/add")
 async def add_budget_item(project_id: str, item: dict):
-    """
-    Adiciona novo item ao orçamento.
-
-    Args:
-        item: Dicionário com dados do item:
-              {
-                "codigo": "87498",
-                "descricao": "ALVENARIA...",
-                "unidade": "M2",
-                "quantidade": 10.5,
-                "custo_unit_direto": 45.50
-              }
-    """
+    """Adiciona novo item ao orçamento."""
     project_dir = PROJECTS_DIR / project_id
+    BudgetEditor = get_budget_editor()
     editor = BudgetEditor(str(project_dir))
 
     result = editor.add_budget_item(project_id, item)
@@ -665,6 +616,7 @@ async def add_budget_item(project_id: str, item: dict):
 async def remove_budget_item(project_id: str, item_index: int):
     """Remove item do orçamento."""
     project_dir = PROJECTS_DIR / project_id
+    BudgetEditor = get_budget_editor()
     editor = BudgetEditor(str(project_dir))
 
     result = editor.remove_budget_item(project_id, item_index)
@@ -679,6 +631,7 @@ async def remove_budget_item(project_id: str, item_index: int):
 async def get_edit_history(project_id: str):
     """Retorna histórico de edições do orçamento."""
     project_dir = PROJECTS_DIR / project_id
+    BudgetEditor = get_budget_editor()
     editor = BudgetEditor(str(project_dir))
 
     return {
@@ -693,8 +646,7 @@ async def list_sinapi_services(search: Optional[str] = None):
     Lista serviços SINAPI disponíveis.
     Opcionalmente filtra por termo de busca.
     """
-    from sinapi import SinapiImporter
-
+    SinapiImporter = get_sinapi_importer()
     importer = SinapiImporter()
 
     if search:
@@ -712,8 +664,7 @@ async def list_sinapi_services(search: Optional[str] = None):
 @app.get("/api/sinapi/service/{codigo}")
 async def get_sinapi_service(codigo: str, regiao: str = "SP"):
     """Retorna informações de um serviço SINAPI específico."""
-    from sinapi import SinapiImporter
-
+    SinapiImporter = get_sinapi_importer()
     importer = SinapiImporter()
     info = importer.get_service_info(codigo)
 
@@ -728,7 +679,3 @@ async def get_sinapi_service(codigo: str, regiao: str = "SP"):
         "preco_unitario": price,
         "regiao": regiao
     }
-
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
