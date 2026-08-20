@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+synthetic-plan.png
+worker.log
+worker-err.log
+venv/

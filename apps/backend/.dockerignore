@@ -1,0 +1,13 @@
+target/
+data/
+uploads/
+*.log
+boot.log
+boot-err.log
+test-api.ps1
+test-security.ps1
+fake.pdf
+test-planta.pdf
+.idea/
+*.iml
+.vscode/

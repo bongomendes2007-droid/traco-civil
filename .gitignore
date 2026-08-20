@@ -69,3 +69,12 @@ htmlcov/
 .dmypy.json
 dmypy.json
 .vercel
+apps/backend/.env
+packages/ai/.env
+*.env
+apps/backend/data/
+apps/backend/uploads/
+apps/web/.next/
+apps/web/node_modules/
+packages/ai/__pycache__/
+target/
