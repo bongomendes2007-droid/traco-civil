@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#ffffff;font-family:'Space Grotesk',system-ui,sans-serif;color:#111110;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="min-height:770px;display:flex;flex-direction:column">
+  <nav style="display:flex;align-items:center;justify-content:space-between;padding:22px 40px;border-bottom:1px solid #ececea">
+    <img src="./assets/traco-civil-logo.png" alt="TRAÇO CIVIL" style="height:28px;width:auto;display:block">
+    <div style="display:flex;align-items:center;gap:30px;font-size:15px;font-weight:500">
+      <span style="display:flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95"><span style="width:7px;height:7px;background:{{ accent }};border-radius:50%"></span>Verificando API...</span>
+      <a href="#">Dashboard</a>
+      <a href="#">Projetos</a>
+      <a href="#" style="border:1.5px solid #111110;padding:9px 20px;border-radius:999px;font-weight:600">Entrar</a>
+    </div>
+  </nav>
+
+  <div style="flex:1;max-width:1120px;width:100%;margin:0 auto;padding:56px 40px">
+    <div style="text-align:center;max-width:640px;margin:0 auto 44px">
+      <div style="display:inline-flex;align-items:center;gap:8px;border:1.5px solid #111110;border-radius:999px;padding:6px 14px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px">
+        <span style="width:7px;height:7px;background:{{ accent }};border-radius:50%"></span>Nova Análise
+      </div>
+      <h1 style="font-size:52px;line-height:1.03;font-weight:700;letter-spacing:-.02em;margin:0 0 18px">Envie sua planta baixa</h1>
+      <p style="font-size:18px;line-height:1.55;color:#5c5c58;margin:0">Nossa IA analisa o projeto e gera quantitativos e orçamento estimativo em minutos. <span style="background:{{ accent }};color:#111110;padding:0 7px;font-weight:600">Sem adivinhação.</span></p>
+    </div>
+
+    <div style="border:2.5px dashed #cfcdc6;border-radius:22px;background:#faf9f6;padding:60px 40px;text-align:center;transition:border-color .2s" style-hover="border-color:{{ accent }}">
+      <div style="width:82px;height:82px;border-radius:50%;background:#111110;display:flex;align-items:center;justify-content:center;margin:0 auto 26px">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/><path d="M5 21h14"/></svg>
+      </div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:10px">Arraste sua planta aqui ou clique para selecionar</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;color:#9a9a95">Formatos aceitos: PDF, DWG, PNG, JPG (máx. 50MB)</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:22px">
+      <div style="border:1px solid #ececea;border-radius:16px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <span style="width:38px;height:38px;border-radius:10px;background:#111110;color:{{ accent }};display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:13px;font-weight:700">01</span>
+          <span style="font-size:17px;font-weight:700">Upload</span>
+        </div>
+        <p style="font-size:14px;line-height:1.5;color:#5c5c58;margin:0">Envie PDF ou DWG da planta baixa do seu projeto.</p>
+      </div>
+      <div style="border:1px solid #ececea;border-radius:16px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <span style="width:38px;height:38px;border-radius:10px;background:#111110;color:{{ accent }};display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="{{ accent }}"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
+          </span>
+          <span style="font-size:17px;font-weight:700">Análise IA</span>
+        </div>
+        <p style="font-size:14px;line-height:1.5;color:#5c5c58;margin:0">Detecção automática de paredes, esquadrias e áreas.</p>
+      </div>
+      <div style="border:1px solid #ececea;border-radius:16px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <span style="width:38px;height:38px;border-radius:10px;background:#111110;color:{{ accent }};display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 4-6"/></svg>
+          </span>
+          <span style="font-size:17px;font-weight:700">Resultado</span>
+        </div>
+        <p style="font-size:14px;line-height:1.5;color:#5c5c58;margin:0">Quantitativos + orçamento estimado com margem transparente.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:34px;font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Os valores gerados são estimativas com margem de ±8%. Consulte um engenheiro responsável.
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1366,&quot;height&quot;:770},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5a1f&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#ff5a1f&quot;,&quot;#c6f24e&quot;,&quot;#f97316&quot;,&quot;#111110&quot;]}}">
+class Component extends DCLogic {
+  renderVals() { return { accent: this.props.accent ?? "#ff5a1f" }; }
+}
+</script>
+</body>
+</html>

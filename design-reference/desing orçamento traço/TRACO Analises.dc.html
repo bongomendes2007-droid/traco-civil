@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f6f2;font-family:'Space Grotesk',system-ui,sans-serif;color:#111110;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .an-filt{padding:8px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #e2e0da;background:#fff;color:#6f6f69}
+  .an-filt.on{background:#111110;color:#fff;border-color:#111110}
+</style>
+</helmet>
+<div style="width:1420px;max-width:1420px;margin:0 auto;padding:40px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px">
+    <div>
+      <h1 style="font-size:36px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px">Histórico de Análises</h1>
+      <p style="font-family:'Space Mono',monospace;font-size:13px;color:#9a9a95;margin:0">7 análises · 4 concluídas · 2 em processamento</p>
+    </div>
+    <a href="#" style="display:inline-flex;align-items:center;gap:9px;background:{{ accent }};color:#111110;font-size:15px;font-weight:700;padding:13px 22px;border-radius:12px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/></svg>Nova Análise
+    </a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px">
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:10px">ANÁLISES TOTAIS</div>
+      <div style="font-size:28px;font-weight:700">7<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> execuções</span></div>
+    </div>
+    <div style="background:#111110;border-radius:16px;padding:20px">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#b8b6ae;margin-bottom:10px">CONFIANÇA MÉDIA</div>
+      <div style="font-size:28px;font-weight:700;color:{{ accent }}">96,3<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#b8b6ae"> %</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:10px">TEMPO MÉDIO</div>
+      <div style="font-size:28px;font-weight:700">16<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> segundos</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:10px">ÁREA ANALISADA</div>
+      <div style="font-size:28px;font-weight:700">1.477,2<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> m²</span></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <div style="flex:1;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e0da;border-radius:12px;padding:12px 16px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a9a95" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <span style="font-size:14px;color:#9a9a95">Buscar por código, projeto ou planta...</span>
+        </div>
+        <div class="an-filt on">Todas</div>
+        <div class="an-filt">Concluídas</div>
+        <div class="an-filt">Revisadas</div>
+        <div class="an-filt">Processando</div>
+      </div>
+
+      <!-- expanded row -->
+      <div style="background:#fff;border:2px solid {{ accent }};border-radius:16px;margin-bottom:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:18px;padding:16px 20px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9a9a95" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)"><path d="M9 18l6-6-6-6"/></svg>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:{{ accent }};width:76px">ANL-0047</span>
+          <div style="width:180px"><div style="font-size:15px;font-weight:700">Residencial Alpha</div><div style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">Planta Térreo.pdf</div></div>
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#8a8a85;flex:1">14 Ago 2026, 09:12</span>
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#8a8a85">12s</span>
+          <div style="width:120px"><div style="font-family:'Space Mono',monospace;font-size:11px;color:#9a9a95;text-align:right">98%</div><div style="height:4px;background:#f0efec;border-radius:2px;margin-top:3px"><div style="width:98%;height:100%;background:{{ accent }};border-radius:2px"></div></div></div>
+          <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:{{ accent }};width:130px;text-align:right">R$ 287.540,60</span>
+          <span style="font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:5px 9px;border-radius:6px;background:#eaf7e6;color:#2f7d32">Concluída</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;padding:22px 24px 24px;border-top:1px solid #f0efec;background:#fbfaf7">
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:14px">ELEMENTOS DETECTADOS</div>
+            <sc-for list="{{ elements }}" as="e"><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f2f1ed"><span style="font-size:14px;color:#5c5c58">{{ e.k }}</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700">{{ e.v }}</span></div></sc-for>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:14px">QUANTITATIVOS ESTIMADOS</div>
+            <sc-for list="{{ quant }}" as="e"><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f2f1ed"><span style="font-size:14px;color:#5c5c58">{{ e.k }}</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700">{{ e.v }}</span></div></sc-for>
+          </div>
+          <div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95;margin-bottom:14px">RESUMO</div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f2f1ed"><span style="font-size:14px;color:#5c5c58">Área</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700">142,6 m²</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f2f1ed"><span style="font-size:14px;color:#5c5c58">Ambientes</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700">4</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f2f1ed"><span style="font-size:14px;color:#5c5c58">Orçamento est.</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:{{ accent }}">R$ 287.540,60</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0"><span style="font-size:14px;color:#5c5c58">Margem</span><span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;background:{{ accent }};color:#111110">±8%</span></div>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;padding:10px;border-radius:10px;border:1.5px solid #111110"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>Ver no canvas</a>
+              <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;padding:10px;border-radius:10px;background:{{ accent }};color:#111110">Orçamento</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- collapsed rows -->
+      <sc-for list="{{ rows }}" as="r">
+        <div style="background:#fff;border:1px solid #e2e0da;border-radius:14px;margin-bottom:12px;display:flex;align-items:center;gap:18px;padding:16px 20px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:{{ accent }};width:76px">{{ r.code }}</span>
+          <div style="width:180px"><div style="font-size:15px;font-weight:700">{{ r.project }}</div><div style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">{{ r.file }}</div></div>
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#8a8a85;flex:1">{{ r.date }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#8a8a85;width:34px">{{ r.time }}</span>
+          <div style="width:120px">{{ r.confBar }}</div>
+          <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:{{ r.priceColor }};width:130px;text-align:right">{{ r.price }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:5px 9px;border-radius:6px;background:{{ r.badgeBg }};color:{{ r.badgeFg }};text-align:center;line-height:1.2">{{ r.status }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- right sidebar -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/></svg><span style="font-size:15px;font-weight:700">Atividade — últimos 7 dias</span></div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;height:96px;margin-bottom:8px">
+          <sc-for list="{{ activity }}" as="a">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%">
+              <span style="font-family:'Space Mono',monospace;font-size:10px;color:#9a9a95">{{ a.val }}</span>
+              <div style="width:100%;height:{{ a.h }};background:{{ a.color }};border-radius:4px 4px 0 0"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <sc-for list="{{ activity }}" as="a"><span style="flex:1;text-align:center;font-family:'Space Mono',monospace;font-size:10px;color:#b2ada2">{{ a.day }}</span></sc-for>
+        </div>
+        <p style="font-size:13px;line-height:1.5;color:#5c5c58;margin:16px 0 0">Pico de atividade em <strong>14 Ago</strong> com <span style="color:{{ accent }};font-weight:700">4 análises</span>.</p>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span style="font-size:15px;font-weight:700">Último relatório</span></div>
+        <div style="border:1px solid #f0efec;border-radius:12px;padding:16px">
+          <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:{{ accent }};margin-bottom:6px">ANL-0047</div>
+          <div style="font-size:16px;font-weight:700">Residencial Alpha</div>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95;margin-top:4px">142,6 m² · R$ 287.540,60 ±8%</div>
+        </div>
+        <a href="#" style="display:block;text-align:center;margin-top:14px;border:1.5px solid #111110;font-size:14px;font-weight:600;padding:11px;border-radius:11px">Abrir orçamento completo</a>
+      </div>
+
+      <div style="background:#fff8f2;border:1px solid #ffd9c2;border-radius:16px;padding:20px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:10px">Como funciona a confiança</div>
+        <p style="font-size:13px;line-height:1.55;color:#5c5c58;margin:0">O score de confiança mede a legibilidade da planta e a certeza da detecção. Abaixo de 90%, recomendamos revisar as caixas de detecção no canvas antes de usar o orçamento como referência.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1420,&quot;height&quot;:1180},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5a1f&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#ff5a1f&quot;,&quot;#c6f24e&quot;,&quot;#f97316&quot;,&quot;#111110&quot;]}}">
+class Component extends DCLogic {
+  confBar(pct, accent) {
+    return React.createElement("div", null,
+      React.createElement("div",{style:{fontFamily:"Space Mono, monospace",fontSize:11,color:"#9a9a95",textAlign:"right"}}, pct+"%"),
+      React.createElement("div",{style:{height:4,background:"#f0efec",borderRadius:2,marginTop:3}},
+        React.createElement("div",{style:{width:pct+"%",height:"100%",background:accent,borderRadius:2}})));
+  }
+  dash() { return React.createElement("div",{style:{fontFamily:"Space Mono, monospace",fontSize:13,color:"#c9c6bd",textAlign:"right"}},"—"); }
+  renderVals() {
+    const accent = this.props.accent ?? "#ff5a1f";
+    const green = {badgeBg:"#eaf7e6", badgeFg:"#2f7d32", status:"Concluída"};
+    const rev = {badgeBg:"#fff", badgeFg:accent, status:"Revisada por engenheiro"};
+    const proc = {badgeBg:"#eeede9", badgeFg:"#9a9a95", status:"Processando"};
+    const fail = {badgeBg:"#fdece9", badgeFg:"#c0392b", status:"Falha na leitura"};
+    const rows = [
+      {code:"ANL-0046", project:"Casa Térrea Delta", file:"Casa Térrea Delta.pdf", date:"14 Ago 2026, 11:52", time:"—", confBar:this.dash(), price:"—", priceColor:"#c9c6bd", ...proc},
+      {code:"ANL-0045", project:"Edifício Comercial Beta", file:"Subsolo Garagem.pdf", date:"14 Ago 2026, 11:47", time:"—", confBar:this.dash(), price:"—", priceColor:"#c9c6bd", ...proc},
+      {code:"ANL-0044", project:"Residencial Alpha", file:"Pavimento Superior.pdf", date:"13 Ago 2026, 16:40", time:"14s", confBar:this.confBar(96,accent), price:"R$ 264.180,00", priceColor:accent, ...rev},
+      {code:"ANL-0043", project:"Residencial Alpha", file:"Fachada Frontal.png", date:"13 Ago 2026, 10:05", time:"3s", confBar:this.dash(), price:"—", priceColor:"#c9c6bd", ...fail},
+      {code:"ANL-0042", project:"Edifício Comercial Beta", file:"Planta Comercial Térreo.dwg", date:"08 Ago 2026, 14:58", time:"21s", confBar:this.confBar(94,accent), price:"R$ 1.245.000,00", priceColor:accent, ...green},
+      {code:"ANL-0041", project:"Galpão Industrial Gamma", file:"Galpão Principal.pdf", date:"01 Ago 2026, 11:18", time:"18s", confBar:this.confBar(97,accent), price:"R$ 890.300,00", priceColor:accent, ...rev},
+    ];
+    const act = [["08",1,"#d8d5cc"],["09",0,"#d8d5cc"],["10",0,"#d8d5cc"],["11",0,"#d8d5cc"],["12",0,"#d8d5cc"],["13",2,"#b0aca2"],["14",4,accent]];
+    const maxV = 4;
+    const activity = act.map(([day,val,color]) => ({day, val, color, h: (val===0? "4px" : Math.round(20+val/maxV*70)+"px")}));
+    return {
+      accent, rows, activity,
+      elements: [{k:"Pilares",v:"24"},{k:"Vigas",v:"37"},{k:"Lajes",v:"18"},{k:"Paredes",v:"56"},{k:"Esquadrias",v:"23"}],
+      quant: [{k:"Concreto",v:"32,45 m³"},{k:"Aço CA-50",v:"4,78 ton"},{k:"Alvenaria",v:"152,40 m²"},{k:"Formas",v:"285,60 m²"}],
+    };
+  }
+}
+</script>
+</body>
+</html>

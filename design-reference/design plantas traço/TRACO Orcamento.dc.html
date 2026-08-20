@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f6f2;font-family:'Space Grotesk',system-ui,sans-serif;color:#111110;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width:1180px;max-width:1180px;margin:0 auto;padding:40px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px">
+    <div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+        <h1 style="font-size:34px;font-weight:700;letter-spacing:-.02em;margin:0">Orçamento Detalhado</h1>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:#111110;background:{{ accent }};padding:5px 10px;border-radius:6px">SINAPI 08/2026</span>
+      </div>
+      <p style="font-family:'Space Mono',monospace;font-size:13px;color:#9a9a95;margin:0">Residencial Alpha · Planta Térreo · 142,6 m² · Gerado em 14 Ago 2026</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="#" style="display:inline-flex;align-items:center;gap:8px;border:1.5px solid #111110;font-size:14px;font-weight:600;padding:10px 16px;border-radius:11px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Imprimir</a>
+      <a href="#" style="display:inline-flex;align-items:center;gap:8px;border:1.5px solid #111110;font-size:14px;font-weight:600;padding:10px 16px;border-radius:11px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>Excel</a>
+      <a href="#" style="display:inline-flex;align-items:center;gap:8px;background:{{ accent }};color:#111110;font-size:14px;font-weight:700;padding:10px 18px;border-radius:11px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>PDF</a>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;background:#fff8f2;border:1px solid #ffd9c2;border-radius:14px;padding:15px 18px;margin-bottom:22px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+    <p style="font-size:13.5px;line-height:1.55;color:#5c5c58;margin:0">Este orçamento é uma <span style="background:{{ accent }};color:#111110;padding:0 5px;font-weight:600">estimativa preliminar</span> baseada em composição SINAPI e leitura automática da planta. Margem de ±8% aplicada. <strong>Não substitui</strong> orçamento executivo nem ART de engenheiro responsável.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+    <div style="background:#111110;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#b8b6ae">CUSTO ESTIMADO</span><span style="color:{{ accent }};font-weight:700">$</span></div>
+      <div style="font-size:26px;font-weight:700;color:{{ accent }}">R$ 149.399,30</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">FAIXA (±8%)</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
+      <div style="font-size:20px;font-weight:700;line-height:1.25">137.447,36 — 161.351,24</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">CUSTO POR M²</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div style="font-size:26px;font-weight:700">R$ 1.047,68<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> /m²</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">ITENS ORÇADOS</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.3-2.3z"/></svg></div>
+      <div style="font-size:26px;font-weight:700">17<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> composições</span></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:18px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #f0efec">
+        <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:18px;font-weight:700">Composições de Custo</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">17 itens</span></div>
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#6f6f69"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"/></svg>Filtrar</span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 44px 78px 92px 104px;gap:12px;padding:12px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;color:#9a9a95;border-bottom:1px solid #f0efec">
+        <span>CÓDIGO</span><span>DESCRIÇÃO</span><span>UN.</span><span style="text-align:right">QTD.</span><span style="text-align:right">P. UNIT.</span><span style="text-align:right">TOTAL</span>
+      </div>
+      <sc-for list="{{ items }}" as="it">
+        <div style="display:grid;grid-template-columns:56px 1fr 44px 78px 92px 104px;gap:12px;padding:13px 24px;align-items:center;border-bottom:1px solid #f4f3ef">
+          <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:{{ accent }}">{{ it.code }}</span>
+          <span style="font-size:14px">{{ it.desc }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">{{ it.un }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;text-align:right">{{ it.qty }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;color:#5c5c58;text-align:right">{{ it.unit }}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:{{ accent }};text-align:right">{{ it.total }}</span>
+        </div>
+      </sc-for>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:28px;padding:18px 24px;background:#111110">
+        <span style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.06em;color:#b8b6ae">TOTAL ESTIMADO</span>
+        <span style="font-size:22px;font-weight:700;color:{{ accent }}">R$ 149.399,30</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span style="font-size:16px;font-weight:700">Por Categoria</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff8f2;border:1px solid #ffd9c2;border-radius:10px;padding:11px 14px;margin-bottom:14px">
+          <span style="font-size:14px;font-weight:700;color:{{ accent }}">Todos os itens</span><span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:{{ accent }}">17</span>
+        </div>
+        <sc-for list="{{ cats }}" as="c">
+          <div style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:14px;font-weight:600">{{ c.name }}</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">{{ c.n }}</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-family:'Space Mono',monospace;font-size:12px;color:#5c5c58">{{ c.value }}</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95">{{ c.pct }}</span></div>
+            <div style="height:5px;background:#f0efec;border-radius:3px"><div style="width:{{ c.w }};height:100%;background:{{ accent }};border-radius:3px"></div></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background:#fff8f2;border:1px solid #ffd9c2;border-radius:16px;padding:20px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span style="font-size:15px;font-weight:700">Sobre esta estimativa</span></div>
+        <p style="font-size:13px;line-height:1.55;color:#5c5c58;margin:0 0 12px">Base de preços: SINAPI 08/2026 (desonerado). BDI não incluso. Valores sujeitos a variação regional e de mercado.</p>
+        <div style="display:flex;gap:8px"><span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:4px 9px;border-radius:5px;background:#eeede9;color:#6f6f69">BDI 0%</span><span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:4px 9px;border-radius:5px;background:#eeede9;color:#6f6f69">±8%</span></div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px">Ações Rápidas</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <a href="#" style="display:flex;align-items:center;gap:10px;border:1px solid #e2e0da;border-radius:11px;padding:12px 14px;font-size:13.5px;font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Baixar memória de cálculo</a>
+          <a href="#" style="display:flex;align-items:center;gap:10px;border:1px solid #e2e0da;border-radius:11px;padding:12px 14px;font-size:13.5px;font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.3-2.3z"/></svg>Ajustar BDI e encargos</a>
+          <a href="#" style="display:flex;align-items:center;gap:10px;border:1px solid #e2e0da;border-radius:11px;padding:12px 14px;font-size:13.5px;font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Comparar com CUB regional</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:1560},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5a1f&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#ff5a1f&quot;,&quot;#c6f24e&quot;,&quot;#f97316&quot;,&quot;#111110&quot;]}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? "#ff5a1f";
+    const items = [
+      {code:"01.01", desc:"Limpeza do terreno", un:"m²", qty:"180,50", unit:"R$ 4,82", total:"R$ 870,01"},
+      {code:"01.02", desc:"Locação da obra", un:"m²", qty:"142,60", unit:"R$ 8,45", total:"R$ 1.204,97"},
+      {code:"02.01", desc:"Escavação manual", un:"m³", qty:"28,40", unit:"R$ 42,30", total:"R$ 1.201,32"},
+      {code:"02.02", desc:"Reaterro compactado", un:"m³", qty:"18,20", unit:"R$ 35,60", total:"R$ 647,92"},
+      {code:"03.01", desc:"Concreto fck 25 MPa", un:"m³", qty:"32,45", unit:"R$ 485,20", total:"R$ 15.744,74"},
+      {code:"03.02", desc:"Aço CA-50", un:"kg", qty:"4.780,00", unit:"R$ 8,92", total:"R$ 42.637,60"},
+      {code:"03.03", desc:"Formas em madeira", un:"m²", qty:"285,60", unit:"R$ 62,40", total:"R$ 17.821,44"},
+      {code:"04.01", desc:"Alvenaria bloco cerâmico", un:"m²", qty:"152,40", unit:"R$ 78,50", total:"R$ 11.963,40"},
+      {code:"04.02", desc:"Chapisco", un:"m²", qty:"304,80", unit:"R$ 12,30", total:"R$ 3.749,04"},
+      {code:"05.01", desc:"Reboco interno", un:"m²", qty:"245,20", unit:"R$ 32,80", total:"R$ 8.042,56"},
+      {code:"05.02", desc:"Piso cerâmico 45×45", un:"m²", qty:"142,60", unit:"R$ 68,90", total:"R$ 9.825,14"},
+      {code:"06.01", desc:"Porta interna madeira", un:"un", qty:"6,00", unit:"R$ 485,00", total:"R$ 2.910,00"},
+      {code:"06.02", desc:"Janela alumínio", un:"un", qty:"8,00", unit:"R$ 620,00", total:"R$ 4.960,00"},
+      {code:"07.01", desc:"Pintura látex PVA", un:"m²", qty:"380,50", unit:"R$ 18,40", total:"R$ 7.001,20"},
+      {code:"08.01", desc:"Instalação elétrica", un:"pt", qty:"42,00", unit:"R$ 185,00", total:"R$ 7.770,00"},
+      {code:"08.02", desc:"Instalação hidráulica", un:"pt", qty:"18,00", unit:"R$ 245,00", total:"R$ 4.410,00"},
+      {code:"09.01", desc:"Telha cerâmica", un:"m²", qty:"165,20", unit:"R$ 52,30", total:"R$ 8.639,96"},
+    ];
+    const cats = [
+      {name:"Estrutura", n:"3", value:"R$ 76.203,78", pct:"51,0%", w:"100%"},
+      {name:"Revestimentos", n:"2", value:"R$ 17.867,70", pct:"12,0%", w:"24%"},
+      {name:"Alvenaria", n:"2", value:"R$ 15.712,44", pct:"10,5%", w:"21%"},
+      {name:"Instalações", n:"2", value:"R$ 12.180,00", pct:"8,2%", w:"16%"},
+      {name:"Cobertura", n:"1", value:"R$ 8.639,96", pct:"5,8%", w:"11%"},
+      {name:"Esquadrias", n:"2", value:"R$ 7.870,00", pct:"5,3%", w:"10%"},
+      {name:"Pintura", n:"1", value:"R$ 7.001,20", pct:"4,7%", w:"9%"},
+      {name:"Serviços Preliminares", n:"2", value:"R$ 2.074,98", pct:"1,4%", w:"3%"},
+      {name:"Movimento de Terra", n:"2", value:"R$ 1.849,24", pct:"1,2%", w:"3%"},
+    ];
+    return { accent, items, cats };
+  }
+}
+</script>
+</body>
+</html>

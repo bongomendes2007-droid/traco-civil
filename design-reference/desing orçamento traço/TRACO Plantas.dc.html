@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f6f2;font-family:'Space Grotesk',system-ui,sans-serif;color:#111110;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  @keyframes plSpin{to{transform:rotate(360deg)}}
+  .pl-filt{padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #e2e0da;background:#fff;color:#6f6f69}
+  .pl-filt.on{background:#111110;color:#fff;border-color:#111110}
+</style>
+</helmet>
+<div style="width:1180px;max-width:1180px;margin:0 auto;padding:44px 40px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
+    <div>
+      <h1 style="font-size:38px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px">Plantas</h1>
+      <p style="font-family:'Space Mono',monospace;font-size:13px;color:#9a9a95;margin:0">7 arquivos · 4 analisadas · 2 em processamento</p>
+    </div>
+    <a href="#" style="display:inline-flex;align-items:center;gap:9px;background:{{ accent }};color:#111110;font-size:15px;font-weight:700;padding:13px 22px;border-radius:12px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/></svg>Nova Planta
+    </a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">ARQUIVOS</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+      <div style="font-size:28px;font-weight:700">7<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> plantas</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">ARMAZENAMENTO</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg></div>
+      <div style="font-size:28px;font-weight:700">17,8<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> MB</span></div>
+    </div>
+    <div style="background:#111110;border:1px solid #111110;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#b8b6ae">ÁREA ANALISADA</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ accent }}" stroke-width="2"><path d="M20.6 8.9 8.9 20.6a2 2 0 0 1-2.8 0l-2.7-2.7a2 2 0 0 1 0-2.8L15.1 3.4a2 2 0 0 1 1.4-.6H20a1 1 0 0 1 1 1v3.7a2 2 0 0 1-.4 1.4z"/></svg></div>
+      <div style="font-size:28px;font-weight:700;color:{{ accent }}">1.477,2<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#b8b6ae"> m²</span></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e0da;border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#9a9a95">AMBIENTES DETECTADOS</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9c6bd" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/></svg></div>
+      <div style="font-size:28px;font-weight:700">27<span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:400;color:#9a9a95"> cômodos</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
+    <div style="flex:1;max-width:420px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e0da;border-radius:12px;padding:12px 16px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a9a95" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <span style="font-size:14px;color:#9a9a95">Buscar por nome ou projeto...</span>
+    </div>
+    <div class="pl-filt on">Todas</div>
+    <div class="pl-filt">Concluídas</div>
+    <div class="pl-filt">Processando</div>
+    <div class="pl-filt">Com erro</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+    <sc-for list="{{ plants }}" as="p">
+      <div style="background:#fff;border:1px solid #e2e0da;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="position:relative;height:172px;background:#faf9f6;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 300 150" style="width:82%;height:auto;opacity:{{ p.planOpacity }}" fill="none">
+            <rect x="20" y="20" width="260" height="110" stroke="#3a382f" stroke-width="3"/>
+            <path d="M150 20 V130 M20 75 H280" stroke="#3a382f" stroke-width="3"/>
+            <text x="85" y="52" font-family="Space Mono, monospace" font-size="10" fill="#9a9a92" text-anchor="middle">SALA</text>
+            <text x="215" y="52" font-family="Space Mono, monospace" font-size="10" fill="#9a9a92" text-anchor="middle">SUÍTE</text>
+            <text x="85" y="107" font-family="Space Mono, monospace" font-size="10" fill="#9a9a92" text-anchor="middle">COZINHA</text>
+            <text x="215" y="107" font-family="Space Mono, monospace" font-size="10" fill="#9a9a92" text-anchor="middle">BANHO</text>
+          </svg>
+          <span style="position:absolute;top:12px;left:12px;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:3px 7px;border-radius:5px;background:#fbeee7;color:{{ accent }}">{{ p.ext }}</span>
+          <sc-if value="{{ p.isDone }}">
+            <span style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:5px;background:#eaf7e6;color:#2f7d32"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Concluída</span>
+          </sc-if>
+          <sc-if value="{{ p.isProc }}">
+            <div style="position:absolute;inset:0;background:rgba(30,28,24,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+              <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:{{ accent }};border-radius:50%;animation:plSpin .9s linear infinite"></div>
+              <span style="font-family:'Space Mono',monospace;font-size:11px;color:#fff">IA lendo planta...</span>
+            </div>
+            <span style="position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:5px;background:{{ accent }};color:#111110">Processando</span>
+          </sc-if>
+          <sc-if value="{{ p.isErr }}">
+            <div style="position:absolute;inset:0;background:rgba(120,30,20,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 24px;text-align:center">
+              <div style="width:34px;height:34px;border:2px solid #ffb4a2;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ffd7cc;font-weight:700">!</div>
+              <span style="font-family:'Space Mono',monospace;font-size:10.5px;line-height:1.4;color:#ffe3db">Não foi possível ler este arquivo. Verifique a qualidade do scan.</span>
+            </div>
+            <span style="position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:4px 8px;border-radius:5px;background:#c0392b;color:#fff">Falha na leitura</span>
+          </sc-if>
+        </div>
+        <div style="padding:18px;display:flex;flex-direction:column;flex:1">
+          <div style="font-size:16px;font-weight:700">{{ p.name }}</div>
+          <div style="font-family:'Space Mono',monospace;font-size:12px;color:#9a9a95;margin:3px 0 14px">{{ p.project }}</div>
+          <div style="display:flex;align-items:center;gap:16px;font-family:'Space Mono',monospace;font-size:12px;color:#8a8a85;padding-bottom:14px;border-bottom:1px solid #f0efec">
+            <span>{{ p.size }}</span><span>{{ p.date }}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px">
+            <span style="font-size:13px;color:#8a8a85">Área</span>
+            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:{{ p.areaColor }}">{{ p.area }}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 14px">
+            <span style="font-size:13px;color:#8a8a85">Ambientes</span>
+            <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:{{ p.areaColor }}">{{ p.rooms }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:auto">
+            <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;padding:11px;border-radius:11px;background:{{ p.btnBg }};color:{{ p.btnFg }};border:{{ p.btnBorder }}">{{ p.btnIcon }}{{ p.btn }}</a>
+            <a href="#" style="width:40px;height:40px;border:1px solid #e2e0da;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9a9a95"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></a>
+            <a href="#" style="width:40px;height:40px;border:1px solid #e2e0da;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9a9a95"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:1400},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5a1f&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#ff5a1f&quot;,&quot;#c6f24e&quot;,&quot;#f97316&quot;,&quot;#111110&quot;]}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? "#ff5a1f";
+    const eye = React.createElement("svg",{width:14,height:14,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round",style:{marginRight:2}},React.createElement("path",{d:"M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"}),React.createElement("circle",{cx:12,cy:12,r:3}));
+    const clock = React.createElement("svg",{width:14,height:14,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round",style:{marginRight:2}},React.createElement("circle",{cx:12,cy:12,r:9}),React.createElement("path",{d:"M12 7v5l3 2"}));
+    const redo = React.createElement("svg",{width:14,height:14,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round",style:{marginRight:2}},React.createElement("path",{d:"M23 4v6h-6"}),React.createElement("path",{d:"M20.5 15a9 9 0 1 1-2.1-9.4L23 10"}));
+    const done = {isDone:true,isProc:false,isErr:false, planOpacity:1, areaColor:"#111110", btn:"Ver Análise", btnIcon:eye, btnBg:"#111110", btnFg:"#fff", btnBorder:"none"};
+    const proc = {isDone:false,isProc:true,isErr:false, planOpacity:.35, area:"—", rooms:"—", areaColor:"#c9c6bd", btn:"Na fila da IA", btnIcon:clock, btnBg:"#f2f1ed", btnFg:"#9a9a95", btnBorder:"1px solid #e2e0da"};
+    const err = {isDone:false,isProc:false,isErr:true, planOpacity:.3, area:"—", rooms:"—", areaColor:"#c9c6bd", btn:"Reprocessar", btnIcon:redo, btnBg:"#fff", btnFg:"#111110", btnBorder:"1.5px solid #111110"};
+    const plants = [
+      {name:"Planta Térreo.pdf", project:"Residencial Alpha", ext:"PDF", size:"2.4 MB", date:"14 Ago 2026", area:"142,6 m²", rooms:"4", ...done},
+      {name:"Pavimento Superior.pdf", project:"Residencial Alpha", ext:"PDF", size:"2.1 MB", date:"13 Ago 2026", area:"128,4 m²", rooms:"5", ...done},
+      {name:"Subsolo Garagem.pdf", project:"Edifício Comercial Beta", ext:"PDF", size:"3.8 MB", date:"14 Ago 2026", ...proc},
+      {name:"Planta Comercial Térreo.dwg", project:"Edifício Comercial Beta", ext:"DWG", size:"5.6 MB", date:"08 Ago 2026", area:"486,2 m²", rooms:"12", ...done},
+      {name:"Fachada Frontal.png", project:"Residencial Alpha", ext:"PNG", size:"840 KB", date:"13 Ago 2026", ...err},
+      {name:"Galpão Principal.pdf", project:"Galpão Industrial Gamma", ext:"PDF", size:"1.9 MB", date:"01 Ago 2026", area:"720,0 m²", rooms:"6", ...done},
+      {name:"Casa Térrea Delta.pdf", project:"Casa Térrea Delta", ext:"PDF", size:"1.2 MB", date:"14 Ago 2026", ...proc},
+    ];
+    return { accent, plants };
+  }
+}
+</script>
+</body>
+</html>
