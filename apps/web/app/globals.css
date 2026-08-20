@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 2px;
+}
+
+html,
+body {
+  font-family: 'Space Grotesk', var(--font-inter), system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #111110;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f4f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #b3b3ad;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8a8a85;
+}
+
+@keyframes traco-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes traco-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes traco-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.traco-float { animation: traco-float 5s ease-in-out infinite; }
+.traco-float-slow { animation: traco-float 6s ease-in-out infinite; }
+.traco-spin { animation: traco-spin 18s linear infinite; }
+.traco-spin-slow { animation: traco-spin 22s linear infinite; }
+.traco-belt {
+  display: flex;
+  width: max-content;
+  animation: traco-marquee 22s linear infinite;
+}
+.traco-belt:hover {
+  animation-play-state: paused;
+}
