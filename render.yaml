@@ -1,0 +1,69 @@
+# Render Blueprint — TRAÇO CIVIL (Java 21 + Spring Boot 3 + Postgres + Worker CV Python)
+# ALINHADO com application-prod.properties: o Spring lê DATABASE_URL / DATABASE_USERNAME /
+# DATABASE_PASSWORD (NAO DB_HOST/DB_NAME/... que eram resíduo do repo antigo "traco").
+# Uso: render.com -> New -> Blueprint -> selecionar o repo traco-civil -> aplicar.
+#
+# IMPORTANTE sobre DATABASE_URL: o código faz spring.datasource.url=jdbc:${DATABASE_URL},
+# então a variável NÃO pode conter "jdbc:" nem credenciais embutidas. Por isso NÃO usamos
+# fromDatabase.connectionString (que vem com user:pass@ e quebraria). Em vez disso, no
+# painel Environment do traco-api, defina DATABASE_URL manualmente como:
+#   postgresql://<host-interno>:5432/<db>   (sem jdbc:, sem user/senha)
+# O host interno do traco-db é obtido na aba Info do serviço traco-db ("Internal Database URL").
+databases:
+  - name: traco-db
+    plan: free
+    databaseName: traco
+    user: traco
+
+services:
+  # ---- Backend Java (Spring Boot) ----
+  - type: web
+    name: traco-api
+    runtime: docker
+    rootDir: apps/backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # JWT secret forte gerado automaticamente pelo Render
+      - key: JWT_SECRET
+        generateValue: true
+      # Token interno compartilhado com o worker traco-ai.
+      # ATENÇÃO: após o 1º deploy, copie o valor gerado aqui para o traco-ai manualmente
+      # (o Blueprint não consegue sincronizar generateValue entre dois serviços).
+      - key: WORKER_TOKEN
+        generateValue: true
+      # URL do frontend (ajuste para a URL real da Vercel antes de aplicar)
+      - key: CORS_ORIGINS
+        value: https://traco-civil.vercel.app
+      # URL interna do worker de IA
+      - key: AI_SERVICE_URL
+        value: https://traco-ai.onrender.com
+      # Usuario e senha lidos de vars separadas pelo application-prod.properties.
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: traco-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: traco-db
+          property: password
+      # DATABASE_URL: definir MANUALMENTE no painel (veja comentário no topo).
+      # Não mapeamos via fromDatabase porque nenhuma propriedade única dá
+      # "postgresql://host:porta/db" sem credenciais e sem "jdbc:".
+
+  # ---- Worker de visão computacional (OpenCV + PyMuPDF) — leitura real de plantas ----
+  - type: web
+    name: traco-ai
+    runtime: python
+    rootDir: packages/ai
+    plan: free
+    healthCheckPath: /
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn worker:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # TEM que bater com o WORKER_TOKEN do traco-api. Defina manualmente no painel
+      # com o MESMO valor gerado/definido no traco-api após o primeiro deploy.
+      - key: WORKER_TOKEN
+        generateValue: true

@@ -78,3 +78,8 @@ apps/web/.next/
 apps/web/node_modules/
 packages/ai/__pycache__/
 target/
+
+.env*
+
+# Local deploy guide containing real secrets - never commit
+RENDER-SETUP-GUIDE.md
