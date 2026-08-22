@@ -1,344 +1,232 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Logo } from "@/components/ui/logo";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, ShieldCheck, Github } from "lucide-react";
-import { login, register, checkApiHealth } from "@/lib/api";
+import { login } from "@/lib/api";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Github, ShieldCheck } from "lucide-react";
 
-export default function LoginPage() {
+const ACCENT = "#ff5a1f";
+
+const VALUE_POINTS = [
+  {
+    no: "01",
+    title: "Leitura automática de plantas",
+    body: "PDF, DWG ou imagem. A IA detecta paredes, esquadrias e áreas.",
+  },
+  {
+    no: "02",
+    title: "Quantitativos em segundos",
+    body: "Concreto, aço, alvenaria e acabamentos calculados automaticamente.",
+  },
+  {
+    no: "03",
+    title: "Orçamento SINAPI transparente",
+    body: "Estimativa com margem ±8% sempre visível. Sem promessas vazias.",
+  },
+];
+
+function LoginForm() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/dashboard";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "engenheiro",
-  });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-
-    if (mode === "register") {
-      if (!form.name.trim()) return setError("Informe seu nome completo.");
-      if (form.password.length < 6) return setError("A senha deve ter pelo menos 6 caracteres.");
-      if (form.password !== form.confirmPassword) return setError("As senhas não coincidem.");
-    }
-
-    if (!form.email.includes("@")) return setError("E-mail inválido.");
-    if (!form.password) return setError("Informe sua senha.");
-
+    setError(null);
     setLoading(true);
+
     try {
-      const apiOnline = await checkApiHealth();
-      if (apiOnline) {
-        if (mode === "login") {
-          await login(form.email, form.password);
-        } else {
-          await register(form.name, form.email, form.password, form.role);
-        }
+      await login(email, password);
+      router.push(redirectTo);
+      router.refresh();
+    } catch (err: any) {
+      const message = err?.message || "";
+      if (message.includes("429") || message.includes("423") || message.toLowerCase().includes("muitas tentativas") || message.toLowerCase().includes("locked")) {
+        setError("Muitas tentativas de acesso. Aguarde alguns minutos antes de tentar novamente.");
       } else {
-        // Fallback demo quando o backend Java não está rodando
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        setError("E-mail ou senha incorretos.");
       }
-      router.push("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha na autenticação.");
+    } finally {
       setLoading(false);
     }
-  };
+  }
+
+  function fillDemo() {
+    setEmail("demo@tracocivil.com.br");
+    setPassword("demo123");
+    setError(null);
+  }
 
   return (
-    <div className="min-h-screen bg-grafite text-papel flex relative overflow-hidden">
-      {/* Left Panel - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-grafite via-grafite to-[#241C16] relative items-center justify-center p-16 border-r border-grafite-3">
-        {/* Grid Background */}
+    <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-white text-[#111110]" style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>
+      {/* LEFT: brand / value */}
+      <section className="relative bg-[#f4f4f1] p-14 flex flex-col overflow-hidden min-h-[50vh] lg:min-h-screen">
         <div
-          className="absolute inset-0 opacity-[0.08]"
+          className="absolute inset-0 opacity-60"
           style={{
-            backgroundImage: 'linear-gradient(#FF5A1F 1px, transparent 1px), linear-gradient(90deg, #FF5A1F 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-            maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
+            backgroundImage: "linear-gradient(#e4e2db 1px, transparent 1px), linear-gradient(90deg, #e4e2db 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+            maskImage: "radial-gradient(120% 80% at 20% 30%, #000, transparent)",
+            WebkitMaskImage: "radial-gradient(120% 80% at 20% 30%, #000, transparent)",
           }}
         />
+        <div className="relative z-10 flex flex-col h-full max-w-[520px] mx-auto w-full">
+          <Link href="/" className="flex-none self-start mb-auto">
+            <Image src="/assets/traco-civil-logo.png" alt="TRAÇO CIVIL" width={156} height={26} className="h-[26px] w-auto block" />
+          </Link>
 
-        {/* Glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-traco-laranja/10 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="relative z-10 max-w-md w-full">
-          <Logo size="lg" variant="inverse" className="mb-12" />
-
-          <h1 className="font-display text-5xl font-bold text-white tracking-tight leading-[1.05] mb-6">
-            Do traço à obra,
-            <br />
-            <span className="text-traco-laranja">sem adivinhação.</span>
-          </h1>
-
-          <p className="text-lg text-grafite-3 leading-relaxed mb-12">
-            IA para engenharia civil. Quantitativos e orçamento estimativo a partir da sua planta baixa — em minutos, com transparência técnica.
-          </p>
-
-          <div className="space-y-4">
-            <FeatureItem
-              number="01"
-              title="Leitura automática de plantas"
-              description="PDF, DWG ou imagem. A IA detecta paredes, esquadrias e áreas."
-            />
-            <FeatureItem
-              number="02"
-              title="Quantitativos em segundos"
-              description="Concreto, aço, alvenaria e acabamentos calculados automaticamente."
-            />
-            <FeatureItem
-              number="03"
-              title="Orçamento SINAPI transparente"
-              description="Estimativa com margem ±8% sempre visível. Sem promessas vazias."
-            />
-          </div>
-
-          <div className="mt-16 pt-8 border-t border-grafite-3 flex items-center gap-3 text-xs text-grafite-3 font-mono">
-            <ShieldCheck size={16} className="text-traco-laranja/60" />
-            <span>Dados criptografados • LGPD compliant • Brasil 2026</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative">
-        {/* Mobile Logo */}
-        <div className="lg:hidden absolute top-8 left-8">
-          <Logo size="md" variant="inverse" />
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <Badge variant="default" className="mb-4 font-mono text-xs">
-              {mode === "login" ? "ACESSO" : "NOVA CONTA"}
-            </Badge>
-            <h2 className="font-display text-3xl font-bold text-white tracking-tight mb-2">
-              {mode === "login" ? "Bem-vindo de volta" : "Crie sua conta"}
-            </h2>
-            <p className="text-grafite-3 text-sm">
-              {mode === "login"
-                ? "Entre para acessar seus projetos e análises."
-                : "Comece gratuitamente — sem cartão de crédito."}
+          <div className="my-auto py-12">
+            <h1 className="text-[52px] leading-[1.02] font-bold tracking-[-.02em] mb-[22px]">
+              Do traço à obra,<br />
+              <span className="px-[10px]" style={{ background: ACCENT, color: "#111110", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}>
+                sem adivinhação.
+              </span>
+            </h1>
+            <p className="text-[17px] leading-[1.55] text-[#5c5c58] max-w-[400px] mb-10">
+              IA para engenharia civil. Quantitativos e orçamento estimativo a partir da sua planta baixa — em minutos, com transparência técnica.
             </p>
-          </div>
-
-          <Card className="border-grafite-3 bg-grafite-2/20">
-            <CardContent className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "register" && (
+            <div className="flex flex-col gap-[22px] max-w-[420px]">
+              {VALUE_POINTS.map((p) => (
+                <div key={p.no} className="flex gap-4">
+                  <span className="font-mono text-sm font-bold flex-none pt-[2px]" style={{ color: ACCENT }}>{p.no}</span>
                   <div>
-                    <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
-                      Nome completo
-                    </label>
-                    <Input
-                      placeholder="Marina Prado"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
-                    E-mail profissional
-                  </label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grafite-3" />
-                    <Input
-                      type="email"
-                      placeholder="marina@escritorio.com.br"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="pl-10"
-                      required
-                    />
+                    <div className="text-base font-bold mb-[3px]">{p.title}</div>
+                    <div className="text-sm leading-[1.5] text-[#8a8a85]">{p.body}</div>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
-                    Senha
-                  </label>
-                  <div className="relative">
-                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grafite-3" />
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      className="pl-10 pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-grafite-3 hover:text-papel transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                {mode === "register" && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
-                        Confirmar senha
-                      </label>
-                      <div className="relative">
-                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-grafite-3" />
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          value={form.confirmPassword}
-                          onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
-                        Sua função
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: "engenheiro", label: "Engenheiro" },
-                          { id: "arquiteto", label: "Arquiteto" },
-                          { id: "orcamentista", label: "Orçamentista" },
-                        ].map((role) => (
-                          <button
-                            key={role.id}
-                            type="button"
-                            onClick={() => setForm({ ...form, role: role.id })}
-                            className={`p-2.5 rounded-sm border text-xs font-medium transition-all ${
-                              form.role === role.id
-                                ? "border-traco-laranja bg-traco-laranja/10 text-traco-laranja"
-                                : "border-grafite-3 text-grafite-3 hover:border-grafite-2 hover:text-papel"
-                            }`}
-                          >
-                            {role.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {mode === "login" && (
-                  <div className="flex items-center justify-between text-xs">
-                    <label className="flex items-center gap-2 text-grafite-3 cursor-pointer">
-                      <input type="checkbox" className="accent-traco-laranja" />
-                      Lembrar de mim
-                    </label>
-                    <Link href="#" className="text-traco-laranja hover:underline">
-                      Esqueci a senha
-                    </Link>
-                  </div>
-                )}
-
-                <p className="text-[11px] text-grafite-3 font-mono text-center">
-                  Demo: demo@tracocivil.com.br • senha demo123
-                </p>
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 font-display font-semibold gap-2"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      {mode === "login" ? "Entrar" : "Criar conta gratuita"}
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </Button>
-
-                <Separator className="my-2" />
-
-                <Button variant="outline" className="w-full gap-2" type="button">
-                  <Github size={16} />
-                  Continuar com GitHub
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="mt-6 text-center text-sm text-grafite-3">
-            {mode === "login" ? (
-              <>
-                Novo no TRAÇO CIVIL?{" "}
-                <button
-                  onClick={() => { setMode("register"); setError(""); }}
-                  className="text-traco-laranja hover:underline font-medium"
-                >
-                  Criar conta gratuita
-                </button>
-              </>
-            ) : (
-              <>
-                Já tem uma conta?{" "}
-                <button
-                  onClick={() => { setMode("login"); setError(""); }}
-                  className="text-traco-laranja hover:underline font-medium"
-                >
-                  Fazer login
-                </button>
-              </>
-            )}
+              ))}
+            </div>
           </div>
 
-          <p className="mt-8 text-center text-xs text-grafite-3 font-mono leading-relaxed">
+          <div className="flex items-center gap-2 font-mono text-xs text-[#9a9a95] pt-7 border-t border-[#e2e0da]">
+            <ShieldCheck size={14} strokeWidth={2} className="text-[#111110]" />
+            Dados criptografados · LGPD compliant · Brasil 2026
+          </div>
+        </div>
+      </section>
+
+      {/* RIGHT: form */}
+      <section className="flex flex-col items-center justify-center p-14">
+        <div className="w-full max-w-[400px]">
+          <span className="inline-block font-mono text-[11px] font-bold tracking-[.1em] px-[11px] py-[5px] rounded-md mb-[22px]" style={{ background: ACCENT, color: "#111110" }}>
+            ACESSO
+          </span>
+          <h2 className="text-[34px] font-bold tracking-[-.02em] mb-2">Bem-vindo de volta</h2>
+          <p className="text-base text-[#5c5c58] mb-[30px]">Entre para acessar seus projetos e análises.</p>
+
+          {error && (
+            <div className="mb-5 p-3 rounded-lg bg-[#fff0ea] border border-[#ffd9c2] text-sm text-[#b8360b] font-medium">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">E-MAIL PROFISSIONAL</label>
+            <div className="flex items-center gap-[11px] border-[1.5px] border-[#e2e0da] rounded-xl px-4 py-[14px] mb-5 focus-within:border-[#111110] transition-colors">
+              <Mail size={17} strokeWidth={2} className="text-[#9a9a95] flex-none" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="marina@escritorio.com.br"
+                className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
+              />
+            </div>
+
+            <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">SENHA</label>
+            <div className="flex items-center gap-[11px] border-[1.5px] border-[#111110] rounded-xl px-4 py-[14px] mb-4">
+              <Lock size={17} strokeWidth={2} className="text-[#111110] flex-none" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="bg-transparent border-none outline-none text-[18px] tracking-[3px] text-[#111110] placeholder:tracking-normal placeholder:text-[#9a9a95] w-full"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="text-[#9a9a95] hover:text-[#111110] transition-colors flex-none"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mb-[14px]">
+              <label className="flex items-center gap-[9px] text-sm text-[#5c5c58] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-[18px] h-[18px] rounded-[5px] border-[1.5px] border-[#cfcdc6] accent-[#ff5a1f] cursor-pointer"
+                />
+                Lembrar de mim
+              </label>
+              <a href="#" className="text-sm font-semibold" style={{ color: ACCENT }}>Esqueci a senha</a>
+            </div>
+
+            <button
+              type="button"
+              onClick={fillDemo}
+              className="w-full bg-[#faf9f6] border border-[#ececea] rounded-[10px] px-[14px] py-[11px] mb-5 font-mono text-xs text-[#8a8a85] text-center hover:bg-[#f4f4f1] transition-colors"
+            >
+              Demo: demo@tracocivil.com.br · senha demo123
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center gap-[10px] w-full text-base font-bold py-4 rounded-xl mb-[14px] transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: ACCENT, color: "#111110" }}
+            >
+              {loading ? "Entrando..." : (
+                <>
+                  Entrar
+                  <ArrowRight size={17} strokeWidth={2.4} />
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="flex items-center justify-center gap-[10px] w-full bg-[#111110] text-white text-[15px] font-semibold py-[15px] rounded-xl hover:bg-[#1a1a1a] transition-colors"
+            >
+              <Github size={17} fill="currentColor" />
+              Continuar com GitHub
+            </button>
+          </form>
+
+          <p className="text-center text-[15px] text-[#5c5c58] mt-[26px]">
+            Novo no TRAÇO CIVIL?{" "}
+            <a href="#" className="font-bold" style={{ color: ACCENT }}>Criar conta gratuita</a>
+          </p>
+          <p className="text-center font-mono text-[11px] leading-[1.6] text-[#b2ada2] mt-[18px]">
             Ao continuar, você aceita nossos{" "}
-            <Link href="#" className="text-papel hover:text-traco-laranja">Termos de Uso</Link>
-            {" "}e{" "}
-            <Link href="#" className="text-papel hover:text-traco-laranja">Política de Privacidade</Link>.
+            <a href="#" className="text-[#8a8a85] underline">Termos de Uso</a> e{" "}
+            <a href="#" className="text-[#8a8a85] underline">Política de Privacidade</a>.
           </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 
-function FeatureItem({ number, title, description }: { number: string; title: string; description: string }) {
+export default function LoginPage() {
   return (
-    <div className="flex items-start gap-4">
-      <div className="font-mono text-traco-laranja text-sm font-bold mt-0.5 min-w-[28px]">
-        {number}
-      </div>
-      <div>
-        <h3 className="font-display font-semibold text-white text-sm mb-1">{title}</h3>
-        <p className="text-xs text-grafite-3 leading-relaxed">{description}</p>
-      </div>
-    </div>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

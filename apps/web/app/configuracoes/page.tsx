@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,8 +42,19 @@ const tabs: { id: Tab; label: string; icon: typeof User }[] = [
 ];
 
 export default function ConfiguracoesPage() {
+  const router = useRouter();
   const [active, setActive] = useState<Tab>("perfil");
   const [saved, setSaved] = useState(false);
+
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
+    router.push("/login");
+    router.refresh();
+  }
 
   const [profile, setProfile] = useState({
     name: "Marina Prado",
@@ -591,7 +604,7 @@ export default function ConfiguracoesPage() {
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="text-xs gap-1.5 h-8 text-grafite-3 hover:text-red-400">
+                          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-xs gap-1.5 h-8 text-grafite-3 hover:text-red-400">
                             <LogOut size={13} />
                             Encerrar
                           </Button>

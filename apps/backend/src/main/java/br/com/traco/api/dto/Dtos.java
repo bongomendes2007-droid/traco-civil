@@ -45,8 +45,13 @@ public final class Dtos {
     }
 
     public record PlantaDto(Long id, String name, String format, long sizeBytes, String status,
-                            Double area, Integer rooms, String project, Long projectId, Instant uploadedAt) {
+                            Double area, Integer rooms, String project, Long projectId, Instant uploadedAt,
+                            String analysisMode) {
         public static PlantaDto from(Planta pl) {
+            return from(pl, null);
+        }
+        /** Inclui o modo da análise vinculada ("ia" | "simulado") quando conhecido. */
+        public static PlantaDto from(Planta pl, String analysisMode) {
             return new PlantaDto(
                     pl.getId(),
                     pl.getName(),
@@ -57,12 +62,14 @@ public final class Dtos {
                     pl.getRooms(),
                     pl.getProject() != null ? pl.getProject().getName() : null,
                     pl.getProject() != null ? pl.getProject().getId() : null,
-                    pl.getUploadedAt());
+                    pl.getUploadedAt(),
+                    analysisMode);
         }
     }
 
     public record AnalysisDto(Long id, String code, String project, String plan, Instant date,
                               Integer durationSeconds, Integer confidence, String status,
+                              String analysisMode,
                               Double area, Integer rooms, Double estimatedCost,
                               List<Map<String, String>> elements, List<Map<String, String>> quantities,
                               List<Map<String, Object>> boxes) {
@@ -79,6 +86,7 @@ public final class Dtos {
                     a.getDurationSeconds(),
                     a.getConfidence(),
                     a.getStatus(),
+                    a.getAnalysisMode(),
                     a.getArea(),
                     a.getRooms(),
                     a.getEstimatedCost(),

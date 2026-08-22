@@ -1,5 +1,7 @@
 package br.com.traco.api.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApi(ApiException ex) {
@@ -45,7 +49,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-        // Nunca vaza stacktrace/mensagem interna para o cliente.
+        // Loga a causa real (stack completo) para diagnóstico; o cliente continua
+        // recebendo apenas a mensagem genérica (sem vazamento de internals).
+        log.error("Unhandled exception in request handler", ex);
         return ResponseEntity.status(500)
                 .body(Map.of("detail", "Erro interno no servidor."));
     }

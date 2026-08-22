@@ -5,6 +5,7 @@ import br.com.traco.api.model.Planta;
 import br.com.traco.api.repo.AnalysisRepository;
 import br.com.traco.api.repo.PlantaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +17,16 @@ import java.util.Optional;
 
 /**
  * Pipeline de análise: tenta a leitura REAL no worker de visão computacional
- * (packages/ai/worker.py — OpenCV). Se o worker estiver offline/inacessível,
- * cai no simulador paramétrico determinístico (modo demo). Se o worker
- * recusar explicitamente o arquivo (422), a planta vira status "erro".
+ * (packages/ai/worker.py — OpenCV).
+ *
+ * Comportamento quando o worker está offline/inacessível (política híbrida):
+ *   - profile "prod"  => grava status "erro" ("worker de IA indisponível").
+ *                        NUNCA gera números falsos em produção.
+ *   - demais (dev)    => cai no simulador paramétrico determinístico e grava
+ *                        analysisMode = "simulado" + status "concluida", para
+ *                        que o frontend exiba o aviso "MODO SIMULADO".
+ * Se o worker recusar explicitamente o arquivo (422), a planta vira status "erro"
+ * em qualquer ambiente.
  */
 @Service
 public class AnalysisEngine {
@@ -28,6 +36,10 @@ public class AnalysisEngine {
     private final ObjectMapper objectMapper;
     private final ComputerVisionClient cvClient;
     private final AuditService auditService;
+
+    /** Perfil Spring ativo. "prod" => erro quando worker offline; outro => simulador. */
+    @Value("${spring.profiles.active:default}")
+    private String activeProfile;
 
     public AnalysisEngine(PlantaRepository plantaRepository,
                           AnalysisRepository analysisRepository,
@@ -41,6 +53,10 @@ public class AnalysisEngine {
         this.auditService = auditService;
     }
 
+    private boolean isProd() {
+        return "prod".equalsIgnoreCase(activeProfile == null ? "" : activeProfile.trim());
+    }
+
     @Async
     @Transactional
     public void process(Long plantaId) {
@@ -51,32 +67,25 @@ public class AnalysisEngine {
         analysis.setPlanta(planta);
         analysis.setProject(planta.getProject());
         analysis.setCode(nextCode());
+        analysis.setAnalysisMode("ia"); // default; sobrescrito se cair no simulador
 
         long start = System.currentTimeMillis();
 
         String name = planta.getName() == null ? "" : planta.getName().toLowerCase();
         if (name.contains("fachada") || name.contains("fasade")) {
-            planta.setStatus("erro");
-            analysis.setStatus("erro");
-            analysis.setDurationSeconds(secondsSince(start));
-            analysis.setConfidence(0);
-            plantaRepository.save(planta);
-            analysisRepository.save(analysis);
+            failAnalysis(planta, analysis, start, "Arquivo de fachada não suportado para análise de quantitativos.");
             return;
         }
 
         ComputerVisionClient.CvResult cv = null;
+        boolean workerOffline = false;
         try {
             Optional<ComputerVisionClient.CvResult> r =
                     cvClient.analyze(planta.getStoragePath(), planta.getName());
             if (r.isPresent()) cv = r.get();
+            else workerOffline = true; // Optional.empty() => worker inacessível / fallback
         } catch (ComputerVisionClient.CvRejectedException e) {
-            planta.setStatus("erro");
-            analysis.setStatus("erro");
-            analysis.setDurationSeconds(secondsSince(start));
-            analysis.setConfidence(0);
-            plantaRepository.save(planta);
-            analysisRepository.save(analysis);
+            failAnalysis(planta, analysis, start, "Worker recusou o arquivo: " + safe(e.getMessage()));
             return;
         }
 
@@ -97,8 +106,17 @@ public class AnalysisEngine {
             openings = cv.openings();
             boxesJson = cv.boxesJson();
             duration = Math.max(1, secondsSince(start));
+            analysis.setAnalysisMode("ia");
         } else {
-            // ---- fallback: simulador paramétrico determinístico ----
+            // ---- worker offline: política híbrida ----
+            if (isProd()) {
+                // Produção: NUNCA mascarar com dados falsos.
+                failAnalysis(planta, analysis, start,
+                        "Worker de IA indisponível — análise real não pôde ser feita. Verifique o serviço de visão computacional.");
+                return;
+            }
+            // Dev: simulador determinístico, marcado explicitamente como "simulado".
+            analysis.setAnalysisMode("simulado");
             try {
                 Thread.sleep(2500);
             } catch (InterruptedException e) {
@@ -148,20 +166,35 @@ public class AnalysisEngine {
         plantaRepository.save(planta);
         analysisRepository.save(analysis);
 
-        // Auditoria: registrar conclusão ou falha da análise
+        auditAnalysis(planta, analysis, cost);
+    }
+
+    /** Marca planta + análise como erro com mensagem clara e registra auditoria. */
+    private void failAnalysis(Planta planta, Analysis analysis, long startMs, String reason) {
+        planta.setStatus("erro");
+        analysis.setStatus("erro");
+        analysis.setDurationSeconds(secondsSince(startMs));
+        analysis.setConfidence(0);
+        // Mantém analysisMode="ia" (não foi simulado) — o motivo fica claro pelo status+auditoria.
+        plantaRepository.save(planta);
+        analysisRepository.save(analysis);
+        auditAnalysis(planta, analysis, 0d);
+    }
+
+    private void auditAnalysis(Planta planta, Analysis analysis, double cost) {
+        String userEmail = planta.getProject() != null && planta.getProject().getUser() != null
+                ? planta.getProject().getUser().getEmail() : null;
+        Long userId = planta.getProject() != null && planta.getProject().getUser() != null
+                ? planta.getProject().getUser().getId() : null;
         if ("concluida".equals(analysis.getStatus())) {
-            String userEmail = planta.getProject() != null && planta.getProject().getUser() != null
-                    ? planta.getProject().getUser().getEmail() : null;
-            Long userId = planta.getProject() != null && planta.getProject().getUser() != null
-                    ? planta.getProject().getUser().getId() : null;
             auditService.logAnalysisCompleted(userId, userEmail, analysis.getId(), cost);
         } else if ("erro".equals(analysis.getStatus())) {
-            String userEmail = planta.getProject() != null && planta.getProject().getUser() != null
-                    ? planta.getProject().getUser().getEmail() : null;
-            Long userId = planta.getProject() != null && planta.getProject().getUser() != null
-                    ? planta.getProject().getUser().getId() : null;
-            auditService.logAnalysisFailed(userId, userEmail, analysis.getId(), "CV_REJECTED_OR_FACHADA");
+            auditService.logAnalysisFailed(userId, userEmail, analysis.getId(), "WORKER_OFFLINE_OR_REJECTED");
         }
+    }
+
+    private String safe(String s) {
+        return s == null ? "sem detalhes" : (s.length() > 200 ? s.substring(0, 200) : s);
     }
 
     private int secondsSince(long startMs) {

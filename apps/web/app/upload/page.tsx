@@ -1,362 +1,325 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, FileText, X, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Zap, BarChart3, Wifi, WifiOff } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import { Logo } from "@/components/ui/logo";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { uploadPlan, checkApiHealth } from "@/lib/api";
+import { uploadPlan, getPlanta, checkApiHealth } from "@/lib/api";
+import { Upload, Zap, BarChart3, ShieldCheck, ArrowUp, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+
+const ACCENT = "#ff5a1f";
+const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+const ALLOWED_EXTENSIONS = [".pdf", ".dwg", ".png", ".jpg", ".jpeg"];
 
 export default function UploadPage() {
-  const [isDragging, setIsDragging] = useState(false);
+  const router = useRouter();
+  const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [apiOnline, setApiOnline] = useState<boolean | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [uploadedId, setUploadedId] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Health Check
   useEffect(() => {
-    checkApiHealth().then(setApiOnline);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const validateFile = (f: File): boolean => {
-    const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
-    const validExtensions = [".pdf", ".dwg", ".png", ".jpg", ".jpeg"];
-    const hasValidExtension = validExtensions.some(ext => f.name.toLowerCase().endsWith(ext));
-    return validTypes.includes(f.type) || hasValidExtension;
-  };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && validateFile(droppedFile)) {
-      setFile(droppedFile);
-      setUploadStatus("idle");
-      setErrorMessage("");
-    } else {
-      setUploadStatus("error");
-      setErrorMessage("Formato de arquivo não suportado. Use PDF, DWG, PNG ou JPG.");
+    let mounted = true;
+    async function check() {
+      const ok = await checkApiHealth();
+      if (mounted) setApiStatus(ok ? "online" : "offline");
     }
+    check();
+    const interval = setInterval(check, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && validateFile(selectedFile)) {
-      setFile(selectedFile);
-      setUploadStatus("idle");
-      setErrorMessage("");
-    } else {
-      setUploadStatus("error");
-      setErrorMessage("Formato de arquivo não suportado. Use PDF, DWG, PNG ou JPG.");
-    }
-  };
+  // Polling for analysis status
+  useEffect(() => {
+    if (!uploadedId || !processing) return;
 
-  const handleUpload = async () => {
-    if (!file) return;
-
-    setUploadStatus("uploading");
-    setProgress(0);
-    setErrorMessage("");
-
-    // Simulação de progresso visual enquanto a API processa
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
+    const poll = async () => {
+      try {
+        const current = await getPlanta(uploadedId);
+        if (current) {
+          if (current.status === "concluida") {
+            setProcessing(false);
+            router.push("/dashboard");
+          } else if (current.status === "erro") {
+            setProcessing(false);
+            setError("A análise falhou. Tente novamente com outro arquivo.");
+            setUploading(false);
+          }
         }
-        return prev + Math.random() * 12;
-      });
-    }, 250);
+      } catch (e) {
+        console.error("Polling error", e);
+      }
+    };
+
+    pollingRef.current = setInterval(poll, 2000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [uploadedId, processing, router]);
+
+  const validateFile = (f: File): string | null => {
+    if (f.size > MAX_SIZE) return "Arquivo muito grande. O limite é 50MB.";
+    const ext = "." + f.name.split(".").pop()?.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) return "Formato não suportado. Use PDF, DWG, PNG ou JPG.";
+    // Basic MIME check (DWG often has empty or octet-stream mime)
+    if (f.type && !ALLOWED_TYPES.includes(f.type) && ext !== ".dwg") {
+       // Allow if extension is valid even if mime is weird, backend will double check
+    }
+    return null;
+  };
+
+  const handleFile = useCallback(async (f: File) => {
+    setError(null);
+    const validationError = validateFile(f);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setFile(f);
+    setUploading(true);
+    setProgress(10); // Start visual progress
 
     try {
-      if (apiOnline) {
-        // Tentativa real de upload para a API FastAPI
-        await uploadPlan(file);
-      } else {
-        // Fallback: simulação quando a API não está rodando
-        await new Promise(resolve => setTimeout(resolve, 2500));
-      }
+      // Simulate some progress while uploading
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 5, 90));
+      }, 200);
+
+      const response = await uploadPlan(f);
 
       clearInterval(progressInterval);
       setProgress(100);
-      setUploadStatus("success");
-    } catch (err) {
-      clearInterval(progressInterval);
-      setUploadStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Erro ao processar arquivo. Tente novamente.");
+
+      if (response.id) {
+        setUploadedId(response.id);
+        setProcessing(true);
+        // Keep uploading state true to show "Processing" UI
+      } else {
+        throw new Error("Resposta inválida do servidor");
+      }
+    } catch (err: any) {
+      setError(err.message || "Falha ao enviar arquivo.");
+      setUploading(false);
+      setProgress(0);
+      setFile(null);
+    }
+  }, []);
+
+  const onDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  }, [handleFile]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
     }
   };
 
-  const removeFile = () => {
+  const reset = () => {
     setFile(null);
-    setUploadStatus("idle");
+    setUploading(false);
+    setProcessing(false);
     setProgress(0);
-    setErrorMessage("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    setError(null);
+    setUploadedId(null);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   return (
-    <div className="min-h-screen bg-grafite text-papel flex flex-col">
-      {/* Header */}
-      <header className="border-b border-grafite-3 px-8 py-4 flex items-center justify-between bg-grafite/80 backdrop-blur-sm sticky top-0 z-50">
-        <Link href="/" className="flex items-center gap-3 group">
-          <Logo size="md" variant="inverse" />
+    <div className="min-h-screen flex flex-col bg-white text-[#111110]" style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>
+      {/* NAV */}
+      <nav className="flex items-center justify-between px-10 py-[22px] border-b border-[#ececea]">
+        <Link href="/">
+          <Image src="/assets/traco-civil-logo.png" alt="TRAÇO CIVIL" width={168} height={28} className="h-[28px] w-auto block" />
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2 text-xs font-mono">
-            {apiOnline === null ? (
-              <span className="text-grafite-3">Verificando API...</span>
-            ) : apiOnline ? (
-              <>
-                <Wifi size={14} className="text-green-400" />
-                <span className="text-green-400">API Online</span>
-              </>
-            ) : (
-              <>
-                <WifiOff size={14} className="text-traco-laranja" />
-                <span className="text-traco-laranja">Modo Demo</span>
-              </>
-            )}
-          </div>
-          <Link href="/dashboard" className="text-grafite-3 hover:text-traco-laranja transition-colors font-medium">
-            Dashboard
-          </Link>
-          <Link href="/projetos" className="text-grafite-3 hover:text-traco-laranja transition-colors font-medium">
-            Projetos
-          </Link>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/login">Entrar</Link>
-          </Button>
-        </nav>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden">
-        {/* Background Grid Effect */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: 'linear-gradient(#FF5A1F 1px, transparent 1px), linear-gradient(90deg, #FF5A1F 1px, transparent 1px)',
-            backgroundSize: '40px 40px'
-          }}
-        />
-
-        {/* Glow Effect */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-traco-laranja/5 rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="w-full max-w-3xl relative z-10">
-          <div className="text-center mb-12">
-            <Badge variant="default" className="mb-6 font-mono text-xs px-3 py-1">
-              NOVA ANÁLISE
-            </Badge>
-            <h1 className="font-display text-5xl font-bold mb-4 tracking-tight text-white">
-              Envie sua planta baixa
-            </h1>
-            <p className="text-grafite-3 text-lg max-w-xl mx-auto leading-relaxed">
-              Nossa IA analisa o projeto e gera quantitativos e orçamento estimativo em minutos.
-              <span className="text-traco-laranja font-medium"> Sem adivinhação.</span>
-            </p>
-          </div>
-
-          {/* Upload Area */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => !file && fileInputRef.current?.click()}
-            className={`
-              relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
-              transition-all duration-300 ease-out
-              ${isDragging
-                ? "border-traco-laranja bg-traco-laranja/10 scale-[1.02] shadow-[0_0_40px_rgba(255,90,31,0.2)]"
-                : "border-grafite-3 hover:border-traco-laranja/50 hover:bg-grafite-2/30"
-              }
-              ${uploadStatus === "success" ? "border-green-500/50 bg-green-500/5" : ""}
-              ${uploadStatus === "error" ? "border-red-500/50 bg-red-500/5" : ""}
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.dwg,.png,.jpg,.jpeg"
-              onChange={handleFileSelect}
-              className="hidden"
+        <div className="flex items-center gap-[30px] text-[15px] font-medium">
+          <span className="flex items-center gap-[7px] font-mono text-[12px] text-[#9a9a95]">
+            <span
+              className="w-[7px] h-[7px] rounded-full"
+              style={{
+                background: apiStatus === "online" ? "#22c55e" : apiStatus === "offline" ? "#ef4444" : ACCENT,
+                animation: apiStatus === "checking" ? "pulse 2s infinite" : "none"
+              }}
             />
+            {apiStatus === "checking" ? "Verificando API..." : apiStatus === "online" ? "API Online" : "API Offline"}
+          </span>
+          <Link href="/dashboard" className="hover:text-[#ff5a1f] transition-colors">Dashboard</Link>
+          <Link href="/projetos" className="hover:text-[#ff5a1f] transition-colors">Projetos</Link>
+          <Link href="/configuracoes" className="border-[1.5px] border-[#111110] px-5 py-[9px] rounded-full font-semibold hover:bg-[#111110] hover:text-white transition-colors">
+            Minha Conta
+          </Link>
+        </div>
+      </nav>
 
-            {!file ? (
-              <div className="space-y-6">
-                <div className="mx-auto w-20 h-20 rounded-full bg-grafite-2 border border-grafite-3 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Upload className="w-10 h-10 text-traco-laranja" />
-                </div>
-                <div>
-                  <p className="text-xl font-display font-semibold mb-2 text-white">
-                    Arraste sua planta aqui ou clique para selecionar
-                  </p>
-                  <p className="text-sm text-grafite-3 font-mono">
-                    Formatos aceitos: PDF, DWG, PNG, JPG (máx. 50MB)
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between bg-grafite-2/50 border border-grafite-3 rounded-lg p-5">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-14 h-14 rounded-lg bg-traco-laranja/20 border border-traco-laranja/30 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-7 h-7 text-traco-laranja" />
-                    </div>
-                    <div className="text-left flex-1 min-w-0">
-                      <p className="font-display font-semibold text-white truncate text-lg">{file.name}</p>
-                      <p className="text-sm text-grafite-3 font-mono mt-1">
-                        {formatFileSize(file.size)} • Pronto para análise
-                      </p>
-                    </div>
-                  </div>
-                  {uploadStatus !== "uploading" && uploadStatus !== "success" && (
-                    <button
-                      onClick={removeFile}
-                      className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors text-grafite-3"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
+      {/* MAIN CONTENT */}
+      <div className="flex-1 max-w-[1120px] w-full mx-auto px-10 py-14">
 
-                {uploadStatus === "idle" && (
-                  <Button
-                    onClick={handleUpload}
-                    className="w-full h-12 text-base font-display font-semibold gap-2"
-                    size="lg"
-                  >
-                    <Zap className="w-5 h-5" />
-                    Iniciar Análise com IA
-                  </Button>
-                )}
-
-                {uploadStatus === "uploading" && (
-                  <div className="space-y-4 py-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-traco-laranja font-medium flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-traco-laranja border-t-transparent rounded-full animate-spin" />
-                        {apiOnline ? "Enviando para API..." : "Processando (modo demo)..."}
-                      </span>
-                      <span className="font-mono text-grafite-3">{Math.round(progress)}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                    <div className="grid grid-cols-3 gap-2 text-xs text-grafite-3 font-mono pt-2">
-                      <span className={progress > 20 ? "text-traco-laranja" : ""}>✓ Leitura OCR</span>
-                      <span className={progress > 50 ? "text-traco-laranja" : ""}>✓ Detecção IA</span>
-                      <span className={progress > 80 ? "text-traco-laranja" : ""}>○ Cálculo</span>
-                    </div>
-                  </div>
-                )}
-
-                {uploadStatus === "success" && (
-                  <div className="space-y-4 py-2">
-                    <Alert variant="success">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <AlertDescription className="font-medium">
-                        Análise concluída com sucesso! 4 ambientes detectados.
-                      </AlertDescription>
-                    </Alert>
-                    <Button asChild className="w-full h-12 text-base font-display font-semibold gap-2" size="lg">
-                      <Link href="/dashboard">
-                        Ver Resultados Completos
-                        <ArrowRight className="w-5 h-5" />
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-
-                {uploadStatus === "error" && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{errorMessage}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            )}
+        {/* HEADER */}
+        <div className="text-center max-w-[640px] mx-auto mb-11">
+          <div className="inline-flex items-center gap-2 border-[1.5px] border-[#111110] rounded-full px-[14px] py-[6px] font-mono text-[11px] font-bold tracking-[.12em] uppercase mb-[22px]">
+            <span className="w-[7px] h-[7px] rounded-full" style={{ background: ACCENT }} />
+            Nova Análise
           </div>
-
-          {/* Info Cards */}
-          <div className="grid grid-cols-3 gap-4 mt-12">
-            <Card className="bg-grafite-2/30 border-grafite-3 hover:border-traco-laranja/30 transition-colors">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded bg-traco-laranja/10 flex items-center justify-center">
-                    <span className="font-mono text-traco-laranja text-sm font-bold">01</span>
-                  </div>
-                  <h3 className="font-display font-semibold text-white text-sm">Upload</h3>
-                </div>
-                <p className="text-xs text-grafite-3 leading-relaxed">
-                  Envie PDF ou DWG da planta baixa do seu projeto.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-grafite-2/30 border-grafite-3 hover:border-traco-laranja/30 transition-colors">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded bg-traco-laranja/10 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-traco-laranja" />
-                  </div>
-                  <h3 className="font-display font-semibold text-white text-sm">Análise IA</h3>
-                </div>
-                <p className="text-xs text-grafite-3 leading-relaxed">
-                  Detecção automática de paredes, esquadrias e áreas.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-grafite-2/30 border-grafite-3 hover:border-traco-laranja/30 transition-colors">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded bg-traco-laranja/10 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-traco-laranja" />
-                  </div>
-                  <h3 className="font-display font-semibold text-white text-sm">Resultado</h3>
-                </div>
-                <p className="text-xs text-grafite-3 leading-relaxed">
-                  Quantitativos + orçamento estimado com margem transparente.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Disclaimer */}
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-grafite-3 font-mono">
-            <ShieldCheck className="w-4 h-4 text-traco-laranja/60" />
-            <span>
-              Os valores gerados são estimativas com margem de ±8%. Consulte um engenheiro responsável.
+          <h1 className="text-[52px] leading-[1.03] font-bold tracking-[-.02em] mb-[18px]">
+            Envie sua planta baixa
+          </h1>
+          <p className="text-[18px] leading-[1.55] text-[#5c5c58] m-0">
+            Nossa IA analisa o projeto e gera quantitativos e orçamento estimativo em minutos.{" "}
+            <span className="px-[7px] font-semibold" style={{ background: ACCENT, color: "#111110" }}>
+              Sem adivinhação.
             </span>
+          </p>
+        </div>
+
+        {/* DROPZONE / STATUS AREA */}
+        <div
+          className={`relative border-[2.5px] rounded-[22px] bg-[#faf9f6] p-[60px_40px] text-center transition-all duration-200 ${
+            dragActive ? "border-[#ff5a1f] bg-[#fff5f0]" : "border-[#cfcdc6]"
+          } ${uploading ? "border-solid border-[#111110]" : "border-dashed"}`}
+          onDragEnter={onDrag}
+          onDragLeave={onDrag}
+          onDragOver={onDrag}
+          onDrop={onDrop}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            className="hidden"
+            onChange={handleChange}
+            accept=".pdf,.dwg,.png,.jpg,.jpeg"
+          />
+
+          {!uploading && !processing && (
+            <>
+              <div
+                className="w-[82px] h-[82px] rounded-full bg-[#111110] flex items-center justify-center mx-auto mb-[26px] cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => inputRef.current?.click()}
+              >
+                <Upload size={34} strokeWidth={2} style={{ color: ACCENT }} />
+              </div>
+              <div
+                className="text-[22px] font-bold mb-[10px] cursor-pointer"
+                onClick={() => inputRef.current?.click()}
+              >
+                Arraste sua planta aqui ou clique para selecionar
+              </div>
+              <div className="font-mono text-[13px] text-[#9a9a95]">
+                Formatos aceitos: PDF, DWG, PNG, JPG (máx. 50MB)
+              </div>
+            </>
+          )}
+
+          {uploading && !processing && (
+            <div className="py-8">
+              <div className="w-[82px] h-[82px] rounded-full bg-white border-2 border-[#ececea] flex items-center justify-center mx-auto mb-[26px] relative">
+                 <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#ff5a1f] animate-spin" />
+                 <span className="font-mono text-sm font-bold">{progress}%</span>
+              </div>
+              <div className="text-[20px] font-bold mb-2">Enviando {file?.name}...</div>
+              <div className="w-full max-w-[400px] h-2 bg-[#ececea] rounded-full mx-auto overflow-hidden">
+                <div className="h-full bg-[#ff5a1f] transition-all duration-300" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          {processing && (
+            <div className="py-8">
+               <div className="w-[82px] h-[82px] rounded-full bg-[#111110] flex items-center justify-center mx-auto mb-[26px] relative">
+                 <Zap size={34} fill={ACCENT} className="animate-pulse" />
+               </div>
+               <div className="text-[22px] font-bold mb-[10px]">IA analisando planta...</div>
+               <div className="font-mono text-[13px] text-[#9a9a95] max-w-[400px] mx-auto">
+                 Detectando paredes, esquadrias e calculando quantitativos. Isso pode levar alguns instantes.
+               </div>
+               <button
+                onClick={reset}
+                className="mt-6 text-sm text-[#9a9a95] hover:text-[#111110] underline"
+               >
+                 Cancelar e enviar outra
+               </button>
+            </div>
+          )}
+
+          {error && (
+            <div className="absolute top-4 right-4 left-4 bg-[#fff0ea] border border-[#ffd9c2] text-[#b8360b] p-3 rounded-lg flex items-center justify-between text-sm font-medium animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+              <button onClick={() => setError(null)} className="hover:bg-[#ffd9c2] rounded p-1">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* INFO CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-[18px] mt-[22px]">
+          <div className="border border-[#ececea] rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-[14px]">
+              <span className="w-[38px] h-[38px] rounded-[10px] bg-[#111110] text-[#ff5a1f] flex items-center justify-center font-mono text-[13px] font-bold">01</span>
+              <span className="text-[17px] font-bold">Upload</span>
+            </div>
+            <p className="text-[14px] leading-[1.5] text-[#5c5c58] m-0">Envie PDF ou DWG da planta baixa do seu projeto.</p>
+          </div>
+          <div className="border border-[#ececea] rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-[14px]">
+              <span className="w-[38px] h-[38px] rounded-[10px] bg-[#111110] flex items-center justify-center">
+                <Zap size={18} fill={ACCENT} />
+              </span>
+              <span className="text-[17px] font-bold">Análise IA</span>
+            </div>
+            <p className="text-[14px] leading-[1.5] text-[#5c5c58] m-0">Detecção automática de paredes, esquadrias e áreas.</p>
+          </div>
+          <div className="border border-[#ececea] rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-[14px]">
+              <span className="w-[38px] h-[38px] rounded-[10px] bg-[#111110] flex items-center justify-center">
+                <BarChart3 size={18} stroke={ACCENT} strokeWidth={2} />
+              </span>
+              <span className="text-[17px] font-bold">Resultado</span>
+            </div>
+            <p className="text-[14px] leading-[1.5] text-[#5c5c58] m-0">Quantitativos + orçamento estimado com margem transparente.</p>
           </div>
         </div>
+
+        {/* DISCLAIMER */}
+        <div className="flex items-center justify-center gap-2 mt-[34px] font-mono text-[12px] text-[#9a9a95]">
+          <ShieldCheck size={14} strokeWidth={2} style={{ color: ACCENT }} />
+          Os valores gerados são estimativas com margem de ±8%. Consulte um engenheiro responsável.
+        </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
+        }
+      `}</style>
     </div>
   );
 }

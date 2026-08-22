@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -51,11 +52,32 @@ public class PlantaController {
     }
 
     @GetMapping("/api/plantas")
+    @Transactional(readOnly = true)
     public List<PlantaDto> list() {
         User user = currentUser.require();
         return plantaRepository.findByProjectUserOrderByIdDesc(user).stream()
-                .map(PlantaDto::from)
+                .map(this::withAnalysisMode)
                 .toList();
+    }
+
+    @GetMapping("/api/plantas/{id}")
+    @Transactional(readOnly = true)
+    public PlantaDto get(@PathVariable Long id) {
+        User user = currentUser.require();
+        Planta planta = plantaRepository.findById(id)
+                .orElseThrow(() -> new ApiException("Planta não encontrada.", 404));
+        if (planta.getProject() == null || !planta.getProject().getUser().getId().equals(user.getId())) {
+            throw new ApiException("Planta não encontrada.", 404);
+        }
+        return withAnalysisMode(planta);
+    }
+
+    /** Resolve o analysisMode ("ia" | "simulado") da análise vinculada à planta, se existir. */
+    private PlantaDto withAnalysisMode(Planta pl) {
+        String mode = analysisRepository.findFirstByPlantaId(pl.getId())
+                .map(a -> a.getAnalysisMode())
+                .orElse(null);
+        return PlantaDto.from(pl, mode);
     }
 
     @DeleteMapping("/api/plantas/{id}")

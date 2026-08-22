@@ -37,6 +37,16 @@ public class Analysis {
     @Column(nullable = false)
     private String status; // concluida | revisada | processando | erro
 
+    /**
+     * Modo como a análise foi produzida:
+     *   "ia"       => leitura real pelo worker de visão computacional (OpenCV)
+     *   "simulado" => fallback determinístico (worker offline) — APENAS em dev;
+     *                 em prod o worker offline vira status "erro" em vez disso.
+     * NUNCA tratar "simulado" como análise real no frontend sem aviso explícito.
+     */
+    @Column(name = "analysis_mode", nullable = false, length = 20)
+    private String analysisMode = "ia";
+
     private Integer durationSeconds;
     private Integer confidence;
     private Double area;
@@ -72,6 +82,8 @@ public class Analysis {
     public void setPlanta(Planta planta) { this.planta = planta; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getAnalysisMode() { return analysisMode; }
+    public void setAnalysisMode(String analysisMode) { this.analysisMode = analysisMode; }
     public Integer getDurationSeconds() { return durationSeconds; }
     public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
     public Integer getConfidence() { return confidence; }
