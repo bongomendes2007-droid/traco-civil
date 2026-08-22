@@ -181,7 +181,7 @@ function LoginForm() {
                 />
                 Lembrar de mim
               </label>
-              <a href="#" className="text-sm font-semibold" style={{ color: ACCENT }}>Esqueci a senha</a>
+              <span className="text-sm font-semibold cursor-not-allowed opacity-50" title="Em breve">Esqueci a senha</span>
             </div>
 
             <button
@@ -217,12 +217,12 @@ function LoginForm() {
 
           <p className="text-center text-[15px] text-[#5c5c58] mt-[26px]">
             Novo no TRAÇO CIVIL?{" "}
-            <a href="#" className="font-bold" style={{ color: ACCENT }}>Criar conta gratuita</a>
+            <span className="font-bold cursor-not-allowed opacity-50" title="Em breve">Criar conta gratuita</span>
           </p>
           <p className="text-center font-mono text-[11px] leading-[1.6] text-[#b2ada2] mt-[18px]">
             Ao continuar, você aceita nossos{" "}
-            <a href="#" className="text-[#8a8a85] underline">Termos de Uso</a> e{" "}
-            <a href="#" className="text-[#8a8a85] underline">Política de Privacidade</a>.
+            <span className="text-[#8a8a85] underline cursor-not-allowed opacity-50" title="Em breve">Termos de Uso</span> e{" "}
+            <span className="text-[#8a8a85] underline cursor-not-allowed opacity-50" title="Em breve">Política de Privacidade</span>.
           </p>
         </div>
       </section>

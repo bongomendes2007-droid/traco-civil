@@ -17,6 +17,7 @@ const FEATURES = [
   {
     no: "01",
     title: "Upload inteligente",
+    href: "/upload",
     body: "Arraste sua planta em PDF ou DWG. Nossa IA identifica paredes, esquadrias e áreas automaticamente.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -36,6 +37,7 @@ const FEATURES = [
   {
     no: "02",
     title: "Quantitativos",
+    href: "/analises",
     body: "Concreto, aço, alvenaria e acabamentos calculados em segundos, com precisão técnica.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,6 +58,7 @@ const FEATURES = [
   {
     no: "03",
     title: "Orçamento SINAPI",
+    href: "/orcamentos",
     body: "Estimativa de custo baseada na tabela SINAPI atualizada, com margem de erro transparente.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,6 +79,7 @@ const FEATURES = [
   {
     no: "04",
     title: "Relatórios",
+    href: "/orcamentos",
     body: "Exporte tudo em PDF ou Excel. Pronto para enviar ao cliente ou usar na licitação.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -99,16 +103,19 @@ const STEPS = [
   {
     no: "01",
     title: "Envie a planta",
+    href: "/upload",
     body: "Faça upload do PDF ou DWG. A IA reconhece a geometria e as camadas do desenho.",
   },
   {
     no: "02",
     title: "A IA processa",
+    href: "/plantas",
     body: "Áreas, materiais e quantitativos são extraídos e cruzados com a base SINAPI vigente.",
   },
   {
     no: "03",
     title: "Receba o orçamento",
+    href: "/orcamentos",
     body: "Custo estimado com margem ±8%, itemizado por serviço e pronto para exportar.",
   },
 ];
@@ -161,7 +168,7 @@ export default function LandingPage() {
       <div className="max-w-[1240px] mx-auto px-8">
         {/* NAV */}
         <nav className="flex items-center justify-between py-[26px]">
-          <Link href="#" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <Image src="/assets/traco-civil-logo.png" alt="TRAÇO CIVIL" width={180} height={30} className="h-[30px] w-auto block" />
           </Link>
           <div
@@ -329,14 +336,14 @@ export default function LandingPage() {
                   </span>
                 </h3>
                 <p className="text-[15px] leading-[1.5] mb-5 max-w-[340px]" style={{ color: f.muted }}>{f.body}</p>
-                <a href="#" className="inline-flex items-center gap-[10px] text-[14px] font-semibold" style={{ color: f.fg }}>
+                <Link href={f.href} className="inline-flex items-center gap-[10px] text-[14px] font-semibold" style={{ color: f.fg }}>
                   <span className="w-8 h-8 rounded-full inline-flex items-center justify-center" style={{ background: f.arrowBg, color: f.arrowFg }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M7 17L17 7M9 7h8v8" />
                     </svg>
                   </span>
                   Saiba mais
-                </a>
+                </Link>
               </div>
             ))}
           </div>
@@ -373,12 +380,12 @@ export default function LandingPage() {
                 <span className="font-mono text-[13px]" style={{ color: ACCENT }}>{s.no}</span>
                 <h4 className="text-[20px] font-bold text-white mt-[14px] mb-[10px]">{s.title}</h4>
                 <p className="text-[14px] leading-[1.55] text-[#9a9a92] m-0">{s.body}</p>
-                <a href="#" className="inline-flex items-center gap-2 text-[13px] font-semibold mt-4" style={{ color: ACCENT }}>
+                <Link href={s.href} className="inline-flex items-center gap-2 text-[13px] font-semibold mt-4" style={{ color: ACCENT }}>
                   Saiba mais
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M7 17L17 7M9 7h8v8" />
                   </svg>
-                </a>
+                </Link>
               </div>
             ))}
           </div>
