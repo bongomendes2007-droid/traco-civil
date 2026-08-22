@@ -1,26 +1,8 @@
 {
-  "buildCommand": "pip install -r backend/requirements.txt",
-  "outputDirectory": "frontend",
-  "devCommand": "python backend/main.py",
-  "framework": "fastapi",
-  "builds": [
-    {
-      "src": "backend/main.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "rootDirectory": "apps/web",
+  "buildCommand": "npm run build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install"
 }
