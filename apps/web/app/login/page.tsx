@@ -50,10 +50,17 @@ function LoginForm() {
       router.refresh();
     } catch (err: any) {
       const message = err?.message || "";
+      const status = err?.status; // ApiError tem .status, erro de rede não tem
+
       if (message.includes("429") || message.includes("423") || message.toLowerCase().includes("muitas tentativas") || message.toLowerCase().includes("locked")) {
         setError("Muitas tentativas de acesso. Aguarde alguns minutos antes de tentar novamente.");
-      } else {
+      } else if (status === 401) {
+        // Credenciais inválidas confirmadas pelo backend
         setError("E-mail ou senha incorretos.");
+      } else {
+        // Qualquer outro erro: 502, 504, 500, ou erro de rede (TypeError sem status)
+        // Isso cobre o caso do Render "acordando" o serviço free tier.
+        setError("O servidor está iniciando, tente novamente em alguns segundos.");
       }
     } finally {
       setLoading(false);
