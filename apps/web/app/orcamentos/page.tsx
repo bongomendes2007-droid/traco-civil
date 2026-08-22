@@ -1,354 +1,638 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { StatCard } from "@/components/ui/stat-card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+import { listAnalises, AnalysisDto } from "@/lib/api";
 import {
-  Download,
+  Printer,
   FileSpreadsheet,
   FileText,
-  Printer,
-  TrendingUp,
-  DollarSign,
   AlertTriangle,
+  TrendingUp,
   Layers,
   Hammer,
-  PaintBucket,
-  Zap,
-  Droplets,
   Filter,
-  ChevronDown,
-  ChevronRight,
   Info,
+  Download,
+  Droplets,
+  ArrowUp,
+  RefreshCw,
+  AlertOctagon,
+  ChevronDown,
 } from "lucide-react";
 
-interface CostItem {
-  code: string;
-  description: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  category: string;
-}
-
-const costData: CostItem[] = [
-  { code: "01.01", description: "Limpeza do terreno", unit: "m²", quantity: 180.5, unitPrice: 4.82, total: 870.01, category: "servicos_preliminares" },
-  { code: "01.02", description: "Locação da obra", unit: "m²", quantity: 142.6, unitPrice: 8.45, total: 1204.97, category: "servicos_preliminares" },
-  { code: "02.01", description: "Escavação manual", unit: "m³", quantity: 28.4, unitPrice: 42.3, total: 1201.32, category: "movimento_terra" },
-  { code: "02.02", description: "Reaterro compactado", unit: "m³", quantity: 18.2, unitPrice: 35.6, total: 647.92, category: "movimento_terra" },
-  { code: "03.01", description: "Concreto fck 25 MPa", unit: "m³", quantity: 32.45, unitPrice: 485.2, total: 15744.74, category: "estrutura" },
-  { code: "03.02", description: "Aço CA-50", unit: "kg", quantity: 4780, unitPrice: 8.92, total: 42637.6, category: "estrutura" },
-  { code: "03.03", description: "Formas em madeira", unit: "m²", quantity: 285.6, unitPrice: 62.4, total: 17821.44, category: "estrutura" },
-  { code: "04.01", description: "Alvenaria bloco cerâmico", unit: "m²", quantity: 152.4, unitPrice: 78.5, total: 11963.4, category: "alvenaria" },
-  { code: "04.02", description: "Chapisco", unit: "m²", quantity: 304.8, unitPrice: 12.3, total: 3749.04, category: "alvenaria" },
-  { code: "05.01", description: "Reboco interno", unit: "m²", quantity: 245.2, unitPrice: 32.8, total: 8042.56, category: "revestimentos" },
-  { code: "05.02", description: "Piso cerâmico 45x45", unit: "m²", quantity: 142.6, unitPrice: 68.9, total: 9825.14, category: "revestimentos" },
-  { code: "06.01", description: "Porta interna madeira", unit: "un", quantity: 6, unitPrice: 485.0, total: 2910.0, category: "esquadrias" },
-  { code: "06.02", description: "Janela alumínio", unit: "un", quantity: 8, unitPrice: 620.0, total: 4960.0, category: "esquadrias" },
-  { code: "07.01", description: "Pintura látex PVA", unit: "m²", quantity: 380.5, unitPrice: 18.4, total: 7001.2, category: "pintura" },
-  { code: "08.01", description: "Instalação elétrica", unit: "pt", quantity: 42, unitPrice: 185.0, total: 7770.0, category: "instalacoes" },
-  { code: "08.02", description: "Instalação hidráulica", unit: "pt", quantity: 18, unitPrice: 245.0, total: 4410.0, category: "instalacoes" },
-  { code: "09.01", description: "Telha cerâmica", unit: "m²", quantity: 165.2, unitPrice: 52.3, total: 8639.96, category: "cobertura" },
-];
-
-const categories = [
-  { id: "all", label: "Todos", icon: Layers },
-  { id: "servicos_preliminares", label: "Serviços Preliminares", icon: Hammer },
-  { id: "movimento_terra", label: "Movimento de Terra", icon: Layers },
-  { id: "estrutura", label: "Estrutura", icon: Hammer },
-  { id: "alvenaria", label: "Alvenaria", icon: Layers },
-  { id: "revestimentos", label: "Revestimentos", icon: PaintBucket },
-  { id: "esquadrias", label: "Esquadrias", icon: Layers },
-  { id: "pintura", label: "Pintura", icon: PaintBucket },
-  { id: "instalacoes", label: "Instalações", icon: Zap },
-  { id: "cobertura", label: "Cobertura", icon: Layers },
-];
+const ACCENT = "#ff5a1f";
+const MARGIN = 8;
 
 export default function OrcamentosPage() {
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [data, setData] = useState<AnalysisDto[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
-  const filteredData = activeCategory === "all"
-    ? costData
-    : costData.filter(item => item.category === activeCategory);
-
-  const totalCost = costData.reduce((sum, item) => sum + item.total, 0);
-  const margin = 8;
-  const minCost = totalCost * (1 - margin / 100);
-  const maxCost = totalCost * (1 + margin / 100);
-
-  const categoryTotals = categories.slice(1).map(cat => ({
-    ...cat,
-    total: costData
-      .filter(item => item.category === cat.id)
-      .reduce((sum, item) => sum + item.total, 0),
-    count: costData.filter(item => item.category === cat.id).length,
-  })).filter(cat => cat.total > 0).sort((a, b) => b.total - a.total);
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
-  const toggleRow = (code: string) => {
-    const next = new Set(expandedRows);
-    if (next.has(code)) next.delete(code);
-    else next.add(code);
-    setExpandedRows(next);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const all = await listAnalises();
+      const concluded = all.filter(
+        (a) => a.status === "concluida" || a.status === "revisada"
+      );
+      setData(concluded);
+      if (concluded.length > 0 && selectedId == null) {
+        setSelectedId(concluded[0].id);
+      }
+    } catch (err: any) {
+      const status = err?.status;
+      if (status === 502 || status === 504 || !status) {
+        setError("Não foi possível carregar os orçamentos agora. Tente novamente em instantes.");
+      } else if (status === 401) {
+        setError("Sessão expirada. Faça login novamente.");
+      } else {
+        setError(err?.message || "Erro ao carregar orçamentos.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const analysis = useMemo(() => {
+    if (!data || selectedId == null) return null;
+    return data.find((a) => a.id === selectedId) ?? data[0] ?? null;
+  }, [data, selectedId]);
+
+  const isSimulated = analysis?.analysisMode === "simulado";
+
+  const cost = analysis?.estimatedCost ?? null;
+  const area = analysis?.area ?? null;
+  const minCost = cost != null ? cost * (1 - MARGIN / 100) : null;
+  const maxCost = cost != null ? cost * (1 + MARGIN / 100) : null;
+  const costPerM2 = cost != null && area != null && area > 0 ? cost / area : null;
+
+  // Deriva "itens" a partir dos quantities reais da análise (labels genéricos da IA).
+  // Não inventamos breakdown SINAPI granular — mostramos o que a IA realmente retornou.
+  const realItems = useMemo(() => {
+    if (!analysis?.quantities) return [];
+    return analysis.quantities.map((q, i) => ({
+      code: String(i + 1).padStart(2, "0"),
+      label: q.label,
+      value: q.value,
+    }));
+  }, [analysis]);
+
+  // Agrupa por categoria derivada dos labels (best-effort, sem inventar dados).
+  const categories = useMemo(() => {
+    if (!analysis?.quantities) return [];
+    const groups: Record<string, { count: number }> = {};
+    for (const q of analysis.quantities) {
+      const key = q.label || "Outros";
+      if (!groups[key]) groups[key] = { count: 0 };
+      groups[key].count += 1;
+    }
+    return Object.entries(groups).map(([name, g]) => ({ name, count: g.count }));
+  }, [analysis]);
+
+  const breadcrumbs = [
+    { label: "Projetos", href: "/projetos" },
+    { label: analysis?.project || "Orçamento" },
+    { label: "Orçamento Detalhado" },
+  ];
+
   return (
-    <AppShell breadcrumbs={[{ label: "Projetos", href: "/projetos" }, { label: "Residencial Alpha" }, { label: "Orçamento" }]}>
-      <div className="p-8 max-w-[1600px] mx-auto w-full">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="font-display text-3xl font-bold text-white tracking-tight">
+    <AppShell breadcrumbs={breadcrumbs}>
+      <div className="max-w-[1180px] mx-auto px-10 py-10">
+        {/* HEADER */}
+        <div className="flex items-start justify-between mb-[22px] flex-wrap gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-[14px] mb-2 flex-wrap">
+              <h1 className="text-[34px] font-bold tracking-[-.02em] m-0">
                 Orçamento Detalhado
               </h1>
-              <Badge variant="default" className="font-mono text-xs">SINAPI 08/2026</Badge>
-            </div>
-            <p className="text-grafite-3 text-sm">
-              Residencial Alpha • Planta Térreo • 142,6 m² • Gerado em 14 Ago 2026
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Printer size={16} />
-              Imprimir
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <FileSpreadsheet size={16} />
-              Excel
-            </Button>
-            <Button size="sm" className="gap-2">
-              <FileText size={16} />
-              PDF
-            </Button>
-          </div>
-        </div>
-
-        {/* Warning Alert */}
-        <Alert variant="warning" className="mb-8">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="text-sm leading-relaxed">
-            Este orçamento é uma <strong>estimativa preliminar</strong> baseada em composição SINAPI e leitura automática da planta.
-            Margem de ±{margin}% aplicada. <strong>Não substitui</strong> orçamento executivo nem ART de engenheiro responsável.
-          </AlertDescription>
-        </Alert>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            label="Custo Estimado"
-            value={formatCurrency(totalCost)}
-            icon={<DollarSign size={18} />}
-            highlight
-          />
-          <StatCard
-            label="Faixa (±8%)"
-            value={`${formatCurrency(minCost).replace("R$", "")} — ${formatCurrency(maxCost).replace("R$", "")}`}
-            icon={<TrendingUp size={18} />}
-          />
-          <StatCard
-            label="Custo por m²"
-            value={formatCurrency(totalCost / 142.6)}
-            unit="/m²"
-            icon={<Layers size={18} />}
-          />
-          <StatCard
-            label="Itens Orçados"
-            value={costData.length.toString()}
-            unit="composições"
-            icon={<Hammer size={18} />}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          {/* Main Table */}
-          <Card>
-            <CardHeader className="pb-4 border-b border-grafite-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  Composições de Custo
-                  <span className="text-grafite-3 font-mono text-xs font-normal">
-                    {filteredData.length} itens
-                  </span>
-                </CardTitle>
-                <Button variant="ghost" size="sm" className="gap-2 text-xs">
-                  <Filter size={14} />
-                  Filtrar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-grafite-3 bg-grafite-2/30">
-                      <th className="text-left py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold w-20">Código</th>
-                      <th className="text-left py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold">Descrição</th>
-                      <th className="text-right py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold w-20">Un.</th>
-                      <th className="text-right py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold w-28">Qtd.</th>
-                      <th className="text-right py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold w-32">P. Unit.</th>
-                      <th className="text-right py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold w-36">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredData.map((item) => (
-                      <tr
-                        key={item.code}
-                        className="border-b border-grafite-2 last:border-0 hover:bg-grafite-2/30 transition-colors group cursor-pointer"
-                        onClick={() => toggleRow(item.code)}
-                      >
-                        <td className="py-3 px-4 font-mono text-xs text-traco-laranja font-medium">
-                          <div className="flex items-center gap-1">
-                            {expandedRows.has(item.code) ? <ChevronDown size={12} /> : <ChevronRight size={12} className="opacity-0 group-hover:opacity-100" />}
-                            {item.code}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-papel/90">{item.description}</td>
-                        <td className="py-3 px-4 font-mono text-xs text-grafite-3 text-right">{item.unit}</td>
-                        <td className="py-3 px-4 font-mono text-sm text-white text-right font-medium">
-                          {item.quantity.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-sm text-papel/80 text-right">
-                          {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-sm text-traco-laranja text-right font-semibold">
-                          {formatCurrency(item.total)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-grafite-2/50 border-t-2 border-traco-laranja/30">
-                      <td colSpan={5} className="py-4 px-4 font-display font-bold text-white text-right">
-                        TOTAL ESTIMADO
-                      </td>
-                      <td className="py-4 px-4 font-mono text-lg text-traco-laranja text-right font-bold">
-                        {formatCurrency(totalCost)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sidebar: Category Breakdown */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Layers size={16} className="text-traco-laranja" />
-                  Por Categoria
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-sm text-sm transition-all ${
-                    activeCategory === "all"
-                      ? "bg-traco-laranja/10 border border-traco-laranja/30 text-traco-laranja"
-                      : "text-papel/80 hover:bg-grafite-2"
-                  }`}
+              <span
+                className="font-mono text-[11px] font-bold px-[10px] py-[5px] rounded-[6px]"
+                style={{ background: ACCENT, color: "#111110" }}
+              >
+                SINAPI 08/2026
+              </span>
+              {isSimulated && (
+                <span
+                  className="font-mono text-[10px] font-bold px-[9px] py-[5px] rounded-[6px] inline-flex items-center gap-1"
+                  style={{ background: "#c0392b", color: "#fff" }}
+                  title="Worker de IA indisponível — valores simulados"
                 >
-                  <span className="flex items-center gap-2">
-                    <Layers size={14} />
-                    Todos os itens
-                  </span>
-                  <span className="font-mono text-xs">{costData.length}</span>
-                </button>
-                <Separator />
-                {categoryTotals.map((cat) => {
-                  const Icon = cat.icon;
-                  const percentage = (cat.total / totalCost) * 100;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className={`w-full p-2.5 rounded-sm text-sm transition-all ${
-                        activeCategory === cat.id
-                          ? "bg-traco-laranja/10 border border-traco-laranja/30"
-                          : "hover:bg-grafite-2 border border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className={`flex items-center gap-2 ${activeCategory === cat.id ? "text-traco-laranja" : "text-papel/80"}`}>
-                          <Icon size={14} />
-                          <span className="text-xs font-medium">{cat.label}</span>
-                        </span>
-                        <span className="font-mono text-xs text-grafite-3">{cat.count}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-mono text-xs text-white font-medium">
-                          {formatCurrency(cat.total)}
-                        </span>
-                        <span className="font-mono text-[10px] text-grafite-3">
-                          {percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="h-1 bg-grafite-2 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-traco-laranja transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                  <AlertOctagon size={11} strokeWidth={2.4} />
+                  SIMULADO
+                </span>
+              )}
+            </div>
 
-            <Card className="border-traco-laranja/30 bg-traco-laranja/5">
-              <CardContent className="p-5">
-                <div className="flex items-start gap-3">
-                  <Info size={18} className="text-traco-laranja flex-shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <h4 className="font-display font-semibold text-white text-sm">
-                      Sobre esta estimativa
-                    </h4>
-                    <p className="text-xs text-papel/70 leading-relaxed">
-                      Base de preços: SINAPI 08/2026 (desonerado). BDI não incluso.
-                      Valores sujeitos a variação regional e de mercado.
-                    </p>
-                    <div className="flex items-center gap-2 pt-1">
-                      <Badge variant="mono" className="text-[10px]">BDI 0%</Badge>
-                      <Badge variant="mono" className="text-[10px]">±8%</Badge>
+            {/* Seletor de análise (quando há mais de uma concluída) */}
+            {data && data.length > 1 ? (
+              <div className="relative mt-2 inline-block">
+                <button
+                  onClick={() => setSelectorOpen((v) => !v)}
+                  className="inline-flex items-center gap-2 font-mono text-[13px] text-[#5c5c58] hover:text-[#111110] transition-colors"
+                >
+                  <span className="font-bold" style={{ color: ACCENT }}>
+                    {analysis?.code || "—"}
+                  </span>
+                  <span>·</span>
+                  <span>{analysis?.project || "—"}</span>
+                  <span>·</span>
+                  <span>{analysis?.plan || "—"}</span>
+                  <span>·</span>
+                  <span>
+                    {area != null ? `${br(area, 1)} m²` : "—"}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className="transition-transform"
+                    style={{
+                      transform: selectorOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    }}
+                  />
+                </button>
+                {selectorOpen && (
+                  <div className="absolute left-0 top-full mt-2 z-20 bg-white border border-[#e2e0da] rounded-xl shadow-lg py-1 min-w-[320px]">
+                    {data.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => {
+                          setSelectedId(a.id);
+                          setSelectorOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-[#faf9f6] transition-colors flex items-center justify-between gap-3"
+                        style={{
+                          background:
+                            a.id === selectedId ? "#fff8f2" : undefined,
+                        }}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="font-mono text-[12px] font-bold"
+                              style={{ color: ACCENT }}
+                            >
+                              {a.code || "—"}
+                            </span>
+                            <span className="text-[14px] font-semibold truncate">
+                              {a.project || "—"}
+                            </span>
+                          </div>
+                          <div className="font-mono text-[11px] text-[#9a9a95] truncate">
+                            {a.plan || "—"} ·{" "}
+                            {a.area != null ? `${br(a.area, 1)} m²` : "—"} ·{" "}
+                            {a.estimatedCost != null
+                              ? `R$ ${br(a.estimatedCost)}`
+                              : "—"}
+                          </div>
+                        </div>
+                        {a.analysisMode === "simulado" && (
+                          <span
+                            className="font-mono text-[9px] font-bold px-[6px] py-[3px] rounded-[4px] flex-none"
+                            style={{ background: "#c0392b", color: "#fff" }}
+                          >
+                            SIM
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="font-mono text-[13px] text-[#9a9a95] m-0">
+                {analysis
+                  ? `${analysis.project || "—"} · ${analysis.plan || "—"} · ${
+                      area != null ? `${br(area, 1)} m²` : "—"
+                    } · Gerado em ${formatDate(analysis.date)}`
+                  : "—"}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 border-[1.5px] border-[#111110] text-[14px] font-semibold px-4 py-[10px] rounded-[11px] hover:bg-[#111110] hover:text-white transition-colors"
+            >
+              <Printer size={15} strokeWidth={2} />
+              Imprimir
+            </button>
+            <button
+              disabled
+              title="Exportação Excel em breve"
+              className="inline-flex items-center gap-2 border-[1.5px] border-[#e2e0da] text-[14px] font-semibold px-4 py-[10px] rounded-[11px] text-[#9a9a95] cursor-not-allowed"
+            >
+              <FileSpreadsheet size={15} strokeWidth={2} />
+              Excel
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 text-[14px] font-bold px-[18px] py-[10px] rounded-[11px] hover:opacity-90 transition-opacity"
+              style={{ background: ACCENT, color: "#111110" }}
+            >
+              <FileText size={15} strokeWidth={2} />
+              PDF
+            </button>
+          </div>
+        </div>
+
+        {/* WARNING */}
+        <div
+          className="flex gap-3 rounded-[14px] p-[15px_18px] mb-[22px]"
+          style={{ background: "#fff8f2", border: "1px solid #ffd9c2" }}
+        >
+          <AlertTriangle
+            size={18}
+            strokeWidth={2}
+            className="flex-none mt-[1px]"
+            style={{ color: ACCENT }}
+          />
+          <p className="text-[13.5px] leading-[1.55] text-[#5c5c58] m-0">
+            Este orçamento é uma{" "}
+            <span
+              className="px-[5px] font-semibold"
+              style={{ background: ACCENT, color: "#111110" }}
+            >
+              estimativa preliminar
+            </span>{" "}
+            baseada em composição SINAPI e leitura automática da planta. Margem de
+            ±{MARGIN}% aplicada. <strong>Não substitui</strong> orçamento
+            executivo nem ART de engenheiro responsável.
+          </p>
+        </div>
+
+        {/* LOADING */}
+        {loading && (
+          <div className="bg-white border border-[#e2e0da] rounded-2xl p-12 text-center text-[#9a9a95] font-mono text-sm">
+            Carregando orçamento...
+          </div>
+        )}
+
+        {/* ERROR */}
+        {!loading && error && (
+          <div className="bg-[#fff0ea] border border-[#ffd9c2] rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
+            <AlertOctagon size={24} style={{ color: "#c0392b" }} />
+            <p className="text-sm text-[#92231a] m-0">{error}</p>
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border border-[#111110] hover:bg-[#111110] hover:text-white transition-colors"
+            >
+              <RefreshCw size={14} />
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {/* EMPTY */}
+        {!loading && !error && (!data || data.length === 0) && (
+          <div className="bg-white border border-[#e2e0da] rounded-2xl p-12 text-center">
+            <div
+              className="w-[64px] h-[64px] rounded-full mx-auto mb-5 flex items-center justify-center"
+              style={{ background: "#111110" }}
+            >
+              <FileText size={28} style={{ color: ACCENT }} strokeWidth={2} />
+            </div>
+            <h2 className="text-[22px] font-bold mb-2">
+              Nenhum orçamento disponível ainda
+            </h2>
+            <p className="text-[15px] text-[#5c5c58] max-w-[440px] mx-auto mb-6 leading-[1.55]">
+              Envie uma planta baixa para gerar quantitativos e um orçamento
+              estimativo baseado em SINAPI — em minutos, com margem transparente.
+            </p>
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-[9px] text-[15px] font-bold px-[22px] py-[13px] rounded-xl hover:opacity-90 transition-opacity"
+              style={{ background: ACCENT, color: "#111110" }}
+            >
+              <ArrowUp size={17} strokeWidth={2.2} />
+              Fazer minha primeira análise
+            </Link>
+          </div>
+        )}
+
+        {/* CONTENT */}
+        {!loading && !error && analysis && (
+          <>
+            {/* SUMMARY CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div
+                className="rounded-2xl p-5"
+                style={{ background: "#111110" }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-[11px] tracking-[.06em] text-[#b8b6ae]">
+                    CUSTO ESTIMADO
+                  </span>
+                  <span style={{ color: ACCENT }} className="font-bold">
+                    $
+                  </span>
+                </div>
+                <div
+                  className="text-[26px] font-bold"
+                  style={{ color: ACCENT }}
+                >
+                  {cost != null ? `R$ ${br(cost)}` : "—"}
+                </div>
+              </div>
+              <SummaryCard
+                label={`FAIXA (±${MARGIN}%)`}
+                icon={<TrendingUp size={15} strokeWidth={2} />}
+                value={
+                  minCost != null && maxCost != null
+                    ? `${br(minCost)} — ${br(maxCost)}`
+                    : "—"
+                }
+                small
+              />
+              <SummaryCard
+                label="CUSTO POR M²"
+                icon={<Layers size={15} strokeWidth={2} />}
+                value={costPerM2 != null ? `R$ ${br(costPerM2)}` : "—"}
+                suffix={costPerM2 != null ? "/m²" : undefined}
+              />
+              <SummaryCard
+                label="ITENS ORÇADOS"
+                icon={<Hammer size={15} strokeWidth={2} />}
+                value={String(realItems.length)}
+                suffix="itens da IA"
+              />
+            </div>
+
+            {/* MAIN GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+              {/* TABLE */}
+              <div
+                className="rounded-[18px] overflow-hidden"
+                style={{ background: "#fff", border: "1px solid #e2e0da" }}
+              >
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[#f0efec]">
+                  <div className="flex items-baseline gap-[10px]">
+                    <span className="text-[18px] font-bold">
+                      Quantitativos Estimados
+                    </span>
+                    <span className="font-mono text-[12px] text-[#9a9a95]">
+                      {realItems.length} itens
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-[7px] text-[13px] font-semibold text-[#6f6f69]">
+                    <Filter size={14} strokeWidth={2} />
+                    Filtrar
+                  </span>
+                </div>
+
+                {/* Honest note about SINAPI granularity */}
+                <div
+                  className="px-6 py-3 text-[12.5px] leading-[1.5] text-[#5c5c58] border-b border-[#f0efec]"
+                  style={{ background: "#fbfaf7" }}
+                >
+                  Composição detalhada por insumo SINAPI em breve — os valores
+                  abaixo usam a estimativa da análise de IA.
+                </div>
+
+                {/* Header row */}
+                <div
+                  className="grid gap-3 px-6 py-3 font-mono text-[11px] tracking-[.04em] text-[#9a9a95] border-b border-[#f0efec]"
+                  style={{ gridTemplateColumns: "56px 1fr 140px" }}
+                >
+                  <span>#</span>
+                  <span>ITEM</span>
+                  <span style={{ textAlign: "right" }}>QUANTIDADE</span>
+                </div>
+
+                {/* Rows */}
+                {realItems.length > 0 ? (
+                  realItems.map((it) => (
+                    <div
+                      key={it.code}
+                      className="grid gap-3 px-6 py-[13px] items-center border-b border-[#f4f3ef]"
+                      style={{ gridTemplateColumns: "56px 1fr 140px" }}
+                    >
+                      <span
+                        className="font-mono text-[12px] font-bold"
+                        style={{ color: ACCENT }}
+                      >
+                        {it.code}
+                      </span>
+                      <span className="text-[14px]">{it.label}</span>
+                      <span
+                        className="font-mono text-[13px] font-bold text-right"
+                        style={{ color: "#111110" }}
+                      >
+                        {it.value}
+                      </span>
                     </div>
+                  ))
+                ) : (
+                  <div className="px-6 py-10 text-center text-[#9a9a95] text-sm">
+                    Esta análise não retornou quantitativos detalhados.
+                  </div>
+                )}
+
+                {/* Footer total */}
+                <div
+                  className="flex items-center justify-end gap-7 px-6 py-[18px]"
+                  style={{ background: "#111110" }}
+                >
+                  <span className="font-mono text-[12px] tracking-[.06em] text-[#b8b6ae]">
+                    TOTAL ESTIMADO
+                  </span>
+                  <span
+                    className="text-[22px] font-bold"
+                    style={{ color: ACCENT }}
+                  >
+                    {cost != null ? `R$ ${br(cost)}` : "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* SIDEBAR */}
+              <div className="flex flex-col gap-4">
+                {/* Por Categoria */}
+                <div
+                  className="rounded-2xl p-5"
+                  style={{ background: "#fff", border: "1px solid #e2e0da" }}
+                >
+                  <div className="flex items-center gap-[9px] mb-4">
+                    <Layers size={16} style={{ color: ACCENT }} strokeWidth={2} />
+                    <span className="text-[16px] font-bold">Por Categoria</span>
+                  </div>
+                  <div
+                    className="flex items-center justify-between rounded-[10px] px-[14px] py-[11px] mb-[14px]"
+                    style={{
+                      background: "#fff8f2",
+                      border: "1px solid #ffd9c2",
+                    }}
+                  >
+                    <span
+                      className="text-[14px] font-bold"
+                      style={{ color: ACCENT }}
+                    >
+                      Todos os itens
+                    </span>
+                    <span
+                      className="font-mono text-[13px] font-bold"
+                      style={{ color: ACCENT }}
+                    >
+                      {realItems.length}
+                    </span>
+                  </div>
+                  {categories.length > 0 ? (
+                    categories.map((c) => (
+                      <div key={c.name} className="mb-[14px]">
+                        <div className="flex items-center justify-between mb-[5px]">
+                          <span className="text-[14px] font-semibold">
+                            {c.name}
+                          </span>
+                          <span className="font-mono text-[12px] text-[#9a9a95]">
+                            {c.count}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[13px] text-[#9a9a95] m-0">
+                      Sem categorias disponíveis para esta análise.
+                    </p>
+                  )}
+                </div>
+
+                {/* Sobre esta estimativa */}
+                <div
+                  className="rounded-2xl p-5"
+                  style={{ background: "#fff8f2", border: "1px solid #ffd9c2" }}
+                >
+                  <div className="flex items-center gap-[9px] mb-3">
+                    <Info size={16} strokeWidth={2} style={{ color: ACCENT }} />
+                    <span className="text-[15px] font-bold">
+                      Sobre esta estimativa
+                    </span>
+                  </div>
+                  <p className="text-[13px] leading-[1.55] text-[#5c5c58] m-0 mb-3">
+                    Base de preços: SINAPI 08/2026 (desonerado). BDI não incluso.
+                    Valores sujeitos a variação regional e de mercado.
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="font-mono text-[11px] font-bold px-[9px] py-1 rounded-[5px] bg-[#eeede9] text-[#6f6f69]">
+                      BDI 0%
+                    </span>
+                    <span className="font-mono text-[11px] font-bold px-[9px] py-1 rounded-[5px] bg-[#eeede9] text-[#6f6f69]">
+                      ±{MARGIN}%
+                    </span>
+                    {isSimulated && (
+                      <span className="font-mono text-[11px] font-bold px-[9px] py-1 rounded-[5px] bg-[#c0392b] text-white">
+                        SIMULADO
+                      </span>
+                    )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardContent className="p-5 space-y-3">
-                <h4 className="font-display font-semibold text-white text-sm mb-3">
-                  Ações Rápidas
-                </h4>
-                <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
-                  <Download size={14} />
-                  Baixar memória de cálculo
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
-                  <Droplets size={14} />
-                  Ajustar BDI e encargos
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
-                  <TrendingUp size={14} />
-                  Comparar com CUB regional
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                {/* Ações Rápidas */}
+                <div
+                  className="rounded-2xl p-5"
+                  style={{ background: "#fff", border: "1px solid #e2e0da" }}
+                >
+                  <div className="text-[15px] font-bold mb-[14px]">
+                    Ações Rápidas
+                  </div>
+                  <div className="flex flex-col gap-[10px]">
+                    <button
+                      disabled
+                      title="Em breve"
+                      className="flex items-center gap-[10px] border border-[#e2e0da] rounded-[11px] px-[14px] py-3 text-[13.5px] font-semibold text-[#9a9a95] cursor-not-allowed text-left"
+                    >
+                      <Download size={15} style={{ color: ACCENT }} strokeWidth={2} />
+                      Baixar memória de cálculo
+                    </button>
+                    <button
+                      disabled
+                      title="Em breve"
+                      className="flex items-center gap-[10px] border border-[#e2e0da] rounded-[11px] px-[14px] py-3 text-[13.5px] font-semibold text-[#9a9a95] cursor-not-allowed text-left"
+                    >
+                      <Droplets size={15} style={{ color: ACCENT }} strokeWidth={2} />
+                      Ajustar BDI e encargos
+                    </button>
+                    <button
+                      disabled
+                      title="Em breve"
+                      className="flex items-center gap-[10px] border border-[#e2e0da] rounded-[11px] px-[14px] py-3 text-[13.5px] font-semibold text-[#9a9a95] cursor-not-allowed text-left"
+                    >
+                      <TrendingUp size={15} style={{ color: ACCENT }} strokeWidth={2} />
+                      Comparar com CUB regional
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </AppShell>
   );
+}
+
+function SummaryCard({
+  label,
+  value,
+  suffix,
+  icon,
+  small,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  icon: React.ReactNode;
+  small?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{ background: "#fff", border: "1px solid #e2e0da" }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-mono text-[11px] tracking-[.06em] text-[#9a9a95]">
+          {label}
+        </span>
+        <span style={{ color: "#c9c6bd" }}>{icon}</span>
+      </div>
+      <div
+        className={small ? "text-[20px] font-bold leading-[1.25]" : "text-[26px] font-bold"}
+      >
+        {value}
+        {suffix && (
+          <span className="font-mono text-[13px] font-normal text-[#9a9a95] ml-1">
+            {suffix}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function br(value: number, fractionDigits = 2): string {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
 }
