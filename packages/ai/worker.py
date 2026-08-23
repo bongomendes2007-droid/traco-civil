@@ -79,6 +79,36 @@ def decode_image(data: bytes) -> np.ndarray:
     return img
 
 
+_LAST_MODE = "unknown"
+
+
+def _binarize(gray: np.ndarray) -> np.ndarray:
+    """Binarização com seleção automática por contraste global (p95 - p5).
+
+    Alto contraste (CAD: linha preta sobre fundo branco) -> Otsu global,
+    byte-a-byte o caminho original já validado.
+    Baixo contraste (renders/rasters cinza) -> CLAHE + adaptiveThreshold,
+    recuperando contraste local antes de limiarizar.
+    """
+    global _LAST_MODE
+    lo = float(np.percentile(gray, 5))
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    # CAD nítido tem linhas pretas reais sobre fundo branco → p5 próximo de 0.
+    # Renders/rasters de baixo contraste não têm pretos verdadeiros (p5 > 40),
+    # mesmo que o spread p95-p5 seja alto (cinza-claro → branco).
+    if lo < 40.0:
+        _LAST_MODE = "otsu"
+        _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        return binary
+    _LAST_MODE = "adaptive"
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    eq = clahe.apply(gray)
+    blur = cv2.GaussianBlur(eq, (5, 5), 0)
+    return cv2.adaptiveThreshold(
+        blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, blockSize=31, C=8)
+
+
 def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, Any]:
     if not data:
         return {"ok": False, "reason": "Arquivo vazio."}
@@ -92,16 +122,25 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
     else:
         img = decode_image(data)
 
+    # --- Upscale condicional: renders/rasters pequenos perdem resolução e
+    # quebram morfologia/contornos. Se a maior dimensão < 1200px, redimensiona
+    # para ~1500px mantendo proporção. O DPI efetivo é recalculado na mesma
+    # razão para que a calibração px->m² continue correta. ---
     h, w = img.shape[:2]
+    if max(h, w) < 1200:
+        up_factor = 1500.0 / max(h, w)
+        img = cv2.resize(img, None, fx=up_factor, fy=up_factor, interpolation=cv2.INTER_CUBIC)
+        h, w = img.shape[:2]
+        dpi = int(round(dpi * up_factor))
+
     px_per_m = (dpi / 25.4) * (1000.0 / max(1, scale))
     px2_per_m2 = px_per_m * px_per_m
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    walls = _binarize(gray)
 
     kernel = np.ones((3, 3), np.uint8)
-    walls = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+    walls = cv2.morphologyEx(walls, cv2.MORPH_CLOSE, kernel, iterations=2)
 
     contours, _ = cv2.findContours(walls, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
