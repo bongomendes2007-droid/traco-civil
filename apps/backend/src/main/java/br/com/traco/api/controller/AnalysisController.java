@@ -7,6 +7,7 @@ import br.com.traco.api.repo.AnalysisRepository;
 import br.com.traco.api.security.CurrentUser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +31,7 @@ public class AnalysisController {
     }
 
     @GetMapping("/api/analises")
+    @Transactional(readOnly = true)
     public List<AnalysisDto> list() {
         User user = currentUser.require();
         return analysisRepository.findByProjectUserOrderByIdDesc(user).stream()
