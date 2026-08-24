@@ -120,6 +120,7 @@ def _try_vectorial(data: bytes, scale: int, dpi: int) -> dict[str, Any] | None:
         # Extrair escala real via cotas (texto com padrão "X.XX m" ou "X,XX m")
         text_blocks = page.get_text("blocks")
         detected_scale = scale  # fallback para o parâmetro
+        scale_source = "assumed"  # transparência: "detected" vs "assumed"
         dim_texts = []
         room_names = []
         for block in text_blocks:
@@ -131,20 +132,36 @@ def _try_vectorial(data: bytes, scale: int, dpi: int) -> dict[str, Any] | None:
             if 2 <= len(txt) <= 30 and txt.isupper() and not re.search(r'\d', txt):
                 room_names.append(txt)
 
-        # Se encontrou cotas, usar a maior como referência de dimensão
-        # (assumindo que representa a largura/comprimento total da planta)
-        if dim_texts:
+        # --- Abordagem 3 (Caminho C): detectar escala no texto vetorial ---
+        # Padrões brasileiros comuns: "1:50", "1/50", "ESC 1:50", "ESCALA 1/100",
+        # "escala 1:75", "1 : 50", "1 / 100". Captura o denominador da escala.
+        scale_match = None
+        for block in text_blocks:
+            txt = block[4].strip() if len(block) > 4 else ""
+            # Regex: opcional "esc/escala" + "1" + separador ":" ou "/" + denominador
+            m = re.search(r'(?:esc(?:ala)?)?\s*1\s*[:/]\s*(\d{2,4})', txt, re.IGNORECASE)
+            if m:
+                denom = int(m.group(1))
+                # Sanity: escalas de planta civil típicas entre 1:10 e 1:2000
+                if 10 <= denom <= 2000:
+                    scale_match = denom
+                    break
+
+        if scale_match is not None:
+            detected_scale = scale_match
+            scale_source = "detected"
+            px_per_m = (dpi / 25.4) * (1000.0 / detected_scale)
+        elif dim_texts:
+            # Fallback anterior: calibrar via maior cota (> 5m = dimensão total)
             dims_float = [float(d.replace(',', '.')) for d in dim_texts]
             max_dim = max(dims_float)
-            # Heurística: se a maior cota > 5m, provavelmente é dimensão total
-            # Usar para calibrar px_per_m a partir do MediaBox da página
             if max_dim > 5.0:
                 rect = page.rect
                 page_width_pt = max(rect.width, rect.height)
-                # Assumir que max_dim corresponde à maior dimensão da página
                 pt_per_m = page_width_pt / max_dim
                 px_per_m = pt_per_m * (dpi / 72.0)
                 detected_scale = int(round(1000.0 / (px_per_m * 25.4 / dpi)))
+                scale_source = "detected"  # detectado via cota, não via texto de escala
             else:
                 px_per_m = (dpi / 25.4) * (1000.0 / max(1, scale))
         else:
@@ -229,6 +246,7 @@ def _try_vectorial(data: bytes, scale: int, dpi: int) -> dict[str, Any] | None:
             "mode": "vectorial",
             "segments": len(segments),
             "room_names": room_names[:10],
+            "scale_source": scale_source,
         }
     except Exception:
         return None
