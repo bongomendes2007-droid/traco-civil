@@ -292,6 +292,33 @@ def _binarize(gray: np.ndarray) -> np.ndarray:
         cv2.THRESH_BINARY_INV, blockSize=31, C=8)
 
 
+def _binarize_canny(gray: np.ndarray) -> np.ndarray:
+    """Fallback Canny: detecção de bordas + dilatação para engrossar paredes.
+
+    Usado quando Otsu/adaptativo resulta em 0 cômodos. Diferente do threshold
+    direto (que preenche massas), Canny detecta contornos de transição e a
+    dilatação os transforma em "paredes" com espessura. A semântica muda:
+    a máscara é um anel de bordas, não uma massa preenchida — por isso a
+    lógica de wall_length_m e detecção de cômodos precisa de ajuste no caller.
+    """
+    global _LAST_MODE
+    _LAST_MODE = "canny_fallback"
+    # Redução de ruído antes do Canny
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    # Canny com thresholds automáticos baseados na mediana (robusto a contraste variável)
+    v = np.median(blur)
+    sigma = 0.33
+    lower = int(max(0, (1.0 - sigma) * v))
+    upper = int(min(255, (1.0 + sigma) * v))
+    edges = cv2.Canny(blur, lower, upper)
+    # Dilatação para engrossar as bordas em "paredes" (kernel 3x3, 2 iterações)
+    kernel = np.ones((3, 3), np.uint8)
+    walls = cv2.dilate(edges, kernel, iterations=2)
+    # Fechamento morfológico para conectar gaps pequenos nas paredes
+    walls = cv2.morphologyEx(walls, cv2.MORPH_CLOSE, kernel, iterations=2)
+    return walls
+
+
 def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, Any]:
     if not data:
         return {"ok": False, "reason": "Arquivo vazio."}
@@ -385,6 +412,56 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
     confidence = 0.0
     if rooms:
         confidence = min(0.99, 0.88 + 0.02 * len(rooms) + (0.03 if area_m2 > 20 else 0.0))
+
+    # --- Canny fallback: só ativa quando o caminho normal (Otsu/adaptativo)
+    # resultou em 0 cômodos E confiança baixa. Não substitui o caminho que
+    # já funciona para CAD nítido. ---
+    if len(rooms) == 0 and confidence < 0.5:
+        walls_canny = _binarize_canny(gray)
+        walls_canny = cv2.morphologyEx(walls_canny, cv2.MORPH_CLOSE, kernel, iterations=2)
+        contours_c, _ = cv2.findContours(walls_canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        exterior_c = None
+        for c in sorted(contours_c, key=cv2.contourArea, reverse=True):
+            a = cv2.contourArea(c)
+            if image_area * 0.03 < a < image_area * 0.94:
+                exterior_c = c
+                break
+        if exterior_c is not None:
+            ext_area_c = cv2.contourArea(exterior_c)
+            mask_c = np.zeros((h, w), np.uint8)
+            cv2.drawContours(mask_c, [exterior_c], -1, 255, thickness=cv2.FILLED)
+            free_c = cv2.bitwise_and(cv2.bitwise_not(walls_canny), mask_c)
+            n_c, _, stats_c, _ = cv2.connectedComponentsWithStats(free_c, connectivity=4)
+            rooms_c = []
+            for i in range(1, n_c):
+                x, y, bw, bh, area = stats_c[i]
+                if area < min_room_px or area > ext_area_c * 0.9:
+                    continue
+                rooms_c.append({
+                    "x": round(float(x) / w, 4),
+                    "y": round(float(y) / h, 4),
+                    "w": round(float(bw) / w, 4),
+                    "h": round(float(bh) / h, 4),
+                    "area_m2": round(float(area) / px2_per_m2, 1),
+                })
+            rooms_c.sort(key=lambda r: r["area_m2"], reverse=True)
+            if len(rooms_c) > 0:
+                # Canny encontrou cômodos onde o threshold não conseguiu — usar
+                rooms = rooms_c
+                walls = walls_canny
+                mask_inside = mask_c
+                exterior_area_px = ext_area_c
+                area_m2 = ext_area_c / px2_per_m2
+                pillars = _detect_pillars(walls, mask_inside, px2_per_m2)
+                inner_walls = cv2.bitwise_and(walls, mask_inside)
+                wall_px = cv2.countNonZero(inner_walls)
+                dist = cv2.distanceTransform(walls, cv2.DIST_L2, 3)
+                wall_vals = dist[walls > 0]
+                thickness = float(np.median(wall_vals)) * 2 if wall_vals.size else 1.0
+                wall_length_m = (wall_px / thickness) / px_per_m if thickness > 0 else 0.0
+                openings = len(rooms) + 2
+                confidence = min(0.85, 0.70 + 0.03 * len(rooms))
+                # mode já foi setado para "canny_fallback" dentro de _binarize_canny
 
     return {
         "ok": True,
