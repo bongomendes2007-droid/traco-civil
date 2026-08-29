@@ -1,5 +1,6 @@
 package br.com.traco.api.controller;
 
+import br.com.traco.api.config.RlsContext;
 import br.com.traco.api.dto.Dtos.AuthResponse;
 import br.com.traco.api.dto.Dtos.LoginRequest;
 import br.com.traco.api.dto.Dtos.RegisterRequest;
@@ -36,16 +37,38 @@ public class AuthController {
 
     @PostMapping("/register")
     public UserDto register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-        AuthResponse authResponse = authService.register(request);
-        setAuthCookie(response, authResponse.token());
-        return authResponse.user();
+        // Set email in RLS context BEFORE calling the @Transactional service.
+        // Spring obtains the DB connection when the transaction starts (at service entry),
+        // so the wrapper must see the email in ThreadLocal at that point to allow
+        // INSERT ... RETURNING via the users_select_own SELECT policy.
+        if (request.email() != null) {
+            RlsContext.setEmail(request.email().toLowerCase().trim());
+        }
+        try {
+            AuthResponse authResponse = authService.register(request);
+            setAuthCookie(response, authResponse.token());
+            return authResponse.user();
+        } finally {
+            RlsContext.clear();
+        }
     }
 
     @PostMapping("/login")
     public UserDto login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        AuthResponse authResponse = authService.login(request);
-        setAuthCookie(response, authResponse.token());
-        return authResponse.user();
+        // Set email in RLS context BEFORE calling the @Transactional service.
+        // Spring obtains the DB connection when the transaction starts (at service entry),
+        // so the RlsDataSourceWrapper must see the email in ThreadLocal at that point
+        // to apply SET LOCAL app.current_user_email correctly for audit_log INSERTs.
+        if (request.email() != null) {
+            RlsContext.setEmail(request.email().toLowerCase().trim());
+        }
+        try {
+            AuthResponse authResponse = authService.login(request);
+            setAuthCookie(response, authResponse.token());
+            return authResponse.user();
+        } finally {
+            RlsContext.clear();
+        }
     }
 
     @PostMapping("/logout")

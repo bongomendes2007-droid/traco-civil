@@ -48,6 +48,14 @@ public class ProjectController {
         this.currentUser = currentUser;
     }
 
+    @GetMapping("/{id}")
+    public ProjectDto getById(@PathVariable Long id) {
+        User user = currentUser.require();
+        Project project = projectRepository.findByIdAndUser(id, user)
+                .orElseThrow(() -> new ApiException("Projeto não encontrado.", 404));
+        return ProjectDto.from(project, plantaRepository.countByProject(project));
+    }
+
     @GetMapping
     public List<ProjectDto> list() {
         User user = currentUser.require();

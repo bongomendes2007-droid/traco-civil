@@ -1,13 +1,79 @@
-# TRAÇO CIVIL — Procedimento de Rollback de Migrations (Flyway)
+# TRAÇO CIVIL — Gerenciamento de Migrations e Rollback
 
-**Última atualização:** 2026-08-20  
-**Aplicável a:** ambiente de produção com `spring.flyway.enabled=true`
+**Última atualização:** 2026-08-29  
+**Aplicável a:** ambiente de produção (Supabase PostgreSQL)
 
 ---
 
-## Visão Geral
+## ⚠️ ESTADO ATUAL: Flyway Desativado em Produção
 
-O Flyway gerencia o schema do banco de dados via migrations versionadas (V1..V8). Em produção, o Flyway roda automaticamente na inicialização do backend Java. Este documento descreve como proceder caso uma migration falhe ou precise ser revertida.
+### Decisão Documentada
+O Flyway está **desativado** em produção (`spring.flyway.enabled=false` no profile `prod`).
+
+### Motivo
+As migrations V1-V12 foram aplicadas manualmente via script Python (`psycopg2`) conectando como `postgres` (owner das tabelas), porque:
+1. O `app_user` (usado pelo backend em produção) não é owner das tabelas e não tem privilégio para executar DDL.
+2. O `postgres` do Supabase não tem privilégio de transferir ownership (`ALTER TABLE ... OWNER TO`) nem de `SET ROLE`, impedindo que o Flyway rode como `app_user` ou que as tabelas sejam transferidas para ele.
+3. Tentativas de rodar o Flyway como `postgres` falharam porque o Supabase restringe certas operações DDL mesmo para o role `postgres`.
+
+### Processo para Migrations Futuras
+
+#### Passo 1: Escrever a migration
+Crie o arquivo SQL seguindo a convenção Flyway (mesmo com Flyway desativado, mantemos a nomenclatura para quando reativarmos):
+```
+apps/backend/src/main/resources/db/migration/V{n}__descricao.sql
+```
+
+#### Passo 2: Aplicar manualmente via script Python
+Use o script `packages/ai/run_migrations_supabase.py` ou execute diretamente:
+```python
+import psycopg2
+conn = psycopg2.connect("postgresql://postgres:<SENHA>@db.khpmbksseiwmaurxtxwk.supabase.co:5432/postgres")
+conn.autocommit = True
+cur = conn.cursor()
+sql = open("apps/backend/src/main/resources/db/migration/V{n}__descricao.sql", encoding="utf-8").read()
+cur.execute(sql)
+cur.close()
+conn.close()
+```
+
+#### Passo 3: Registrar no histórico do Flyway (opcional mas recomendado)
+Para evitar confusão futura sobre quais migrations já foram aplicadas:
+```sql
+INSERT INTO flyway_schema_history (installed_rank, version, description, type, script, checksum, installed_by, execution_time, success)
+VALUES (
+    (SELECT COALESCE(MAX(installed_rank), 0) + 1 FROM flyway_schema_history),
+    '{n}',
+    'descricao',
+    'SQL',
+    'V{n}__descricao.sql',
+    NULL,
+    'manual',
+    0,
+    true
+);
+```
+
+#### Passo 4: Commit e deploy
+Faça commit do arquivo `.sql` no repositório. O backend não executará a migration automaticamente, mas ela estará versionada e documentada.
+
+### Quando Reativar o Flyway
+O Flyway poderá ser reativado (`spring.flyway.enabled=true`) quando:
+- O Supabase permitir transferência de ownership para `app_user`, OU
+- Criarmos um role dedicado com privilégios DDL suficientes, OU
+- Migrarmos para um provedor que suporte Flyway nativamente com o role da aplicação.
+
+Até lá, **toda migration deve ser aplicada manualmente** seguindo o processo acima.
+
+---
+
+## Procedimento de Rollback (Referência Histórica)
+
+> **Nota:** As seções abaixo foram escritas quando o Flyway estava ativo. Mantidas como referência para quando reativarmos.
+
+### Visão Geral (Histórico)
+
+O Flyway gerenciava o schema do banco de dados via migrations versionadas (V1..V8). Em produção, o Flyway rodava automaticamente na inicialização do backend Java. Este documento descrevia como proceder caso uma migration falhasse ou precisasse ser revertida.
 
 ---
 

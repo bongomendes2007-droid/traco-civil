@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
  * para que o frontend tenha dados reais sem cadastro manual.
  */
 @Component
+@org.springframework.context.annotation.Profile("!prod")
 public class DataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
