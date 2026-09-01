@@ -13,6 +13,7 @@ import br.com.traco.api.repo.ProjectRepository;
 import br.com.traco.api.security.CurrentUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +50,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ProjectDto getById(@PathVariable Long id) {
         User user = currentUser.require();
         Project project = projectRepository.findByIdAndUser(id, user)
@@ -57,6 +59,7 @@ public class ProjectController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public List<ProjectDto> list() {
         User user = currentUser.require();
         return projectRepository.findByUserOrderByIdDesc(user).stream()
@@ -66,6 +69,7 @@ public class ProjectController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Transactional
     public ProjectDto create(@Valid @RequestBody ProjectRequest req) {
         User user = currentUser.require();
         if (req.name() == null || req.name().isBlank()) {
@@ -83,6 +87,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
+    @Transactional
     public ProjectDto update(@PathVariable Long id, @Valid @RequestBody ProjectRequest req) {
         User user = currentUser.require();
         Project project = projectRepository.findByIdAndUser(id, user)
@@ -96,6 +101,7 @@ public class ProjectController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
     public void delete(@PathVariable Long id) {
         User user = currentUser.require();
         Project project = projectRepository.findByIdAndUser(id, user)

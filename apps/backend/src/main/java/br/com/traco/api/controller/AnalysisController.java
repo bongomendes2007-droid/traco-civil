@@ -7,6 +7,7 @@ import br.com.traco.api.repo.AnalysisRepository;
 import br.com.traco.api.security.CurrentUser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,14 +43,17 @@ public class AnalysisController {
                 .toList();
     }
 
-    /** Endpoint legado compatível com a antiga API FastAPI. */
+    /** Endpoint legado compatível com a antiga API FastAPI — agora exige autenticação e ownership. */
     @GetMapping("/analysis/{id}")
-    public Map<String, Object> legacy(@PathVariable Long id) {
-        Analysis a = analysisRepository.findFetchById(id)
-                .or(() -> analysisRepository.findAllFetch().stream().findFirst())
-                .orElse(null);
-        if (a == null || a.getArea() == null) {
-            return Map.of(
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> legacy(@PathVariable Long id) {
+        User user = currentUser.require();
+        Analysis a = analysisRepository.findFetchById(id).orElse(null);
+        if (a == null || !a.getProject().getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(404).body(Map.of("error", "Análise não encontrada."));
+        }
+        if (a.getArea() == null) {
+            return ResponseEntity.ok(Map.of(
                     "project_name", "Residencial Alpha",
                     "area_total", 142.6,
                     "concrete_volume", 32.45,
@@ -57,10 +61,10 @@ public class AnalysisController {
                     "masonry_area", 152.40,
                     "estimated_cost", 287540.60,
                     "margin_percent", 8.0,
-                    "confidence_score", 0.98);
+                    "confidence_score", 0.98));
         }
         double area = a.getArea();
-        return Map.of(
+        return ResponseEntity.ok(Map.of(
                 "project_name", a.getProject() != null ? a.getProject().getName() : "Projeto",
                 "area_total", area,
                 "concrete_volume", round2(area * 0.2276),
@@ -68,7 +72,7 @@ public class AnalysisController {
                 "masonry_area", round2(area * 1.0687),
                 "estimated_cost", a.getEstimatedCost() != null ? a.getEstimatedCost() : round2(area * 2016.41),
                 "margin_percent", 8.0,
-                "confidence_score", (a.getConfidence() != null ? a.getConfidence() : 95) / 100.0);
+                "confidence_score", (a.getConfidence() != null ? a.getConfidence() : 95) / 100.0));
     }
 
     private List<Map<String, String>> parse(String json) {

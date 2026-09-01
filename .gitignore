@@ -84,3 +84,6 @@ target/
 
 # Local deploy guide containing real secrets - never commit
 RENDER-SETUP-GUIDE.md
+
+# Supabase properties with secrets - use env vars instead
+apps/backend/src/main/resources/application-supabase.properties

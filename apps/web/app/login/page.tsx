@@ -27,10 +27,20 @@ const VALUE_POINTS = [
   },
 ];
 
+function sanitizeRedirect(path: string | null): string {
+  if (!path) return "/dashboard";
+  // Must start with "/" but not "//" (protocol-relative URL)
+  // and must not contain ":" (scheme like javascript: or https:)
+  if (path.startsWith("/") && !path.startsWith("//") && !path.includes(":")) {
+    return path;
+  }
+  return "/dashboard";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = sanitizeRedirect(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

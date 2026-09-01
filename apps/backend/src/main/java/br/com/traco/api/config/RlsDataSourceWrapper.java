@@ -51,8 +51,17 @@ public class RlsDataSourceWrapper implements DataSource {
 
     private void applyRlsContext(Connection conn) {
         try {
-            // SET LOCAL só funciona dentro de transação (autoCommit = false)
+            // SET LOCAL é obrigatório por segurança: a variável só vive dentro da
+            // transação atual e é automaticamente descartada no COMMIT/ROLLBACK.
+            // Isso impede vazamento de contexto RLS entre tenants quando a conexão
+            // é reciclada pelo HikariCP ou pelo Transaction Pooler do Supabase.
+            //
+            // Pré-requisito: autoCommit deve estar false (transação ativa).
+            // Se autoCommit=true, SET LOCAL seria descartado imediatamente.
+            // O wrapper verifica isso e loga um aviso se ocorrer.
             if (conn.getAutoCommit()) {
+                log.warn("RLS context skipped: connection is in autoCommit=true mode. "
+                        + "Queries subject to RLS must run inside @Transactional.");
                 return;
             }
 

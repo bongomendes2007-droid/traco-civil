@@ -94,14 +94,12 @@ public class PlantaController {
     }
 
     /**
-     * Endpoint legado (compatível com o frontend atual): aceita upload sem
-     * autenticação usando o usuário demo como dono dos arquivos.
+     * Endpoint legado — agora exige autenticação obrigatória.
+     * O fallback para usuário demo foi removido por segurança (auditoria 01/09/2026).
      */
     @PostMapping("/upload/")
     public Map<String, Object> legacyUpload(@RequestParam("file") MultipartFile file) {
-        User user = currentUser.optional()
-                .orElseGet(() -> userRepository.findByEmail("demo@tracocivil.com.br")
-                        .orElseThrow(() -> new ApiException("Usuário demo indisponível.", 500)));
+        User user = currentUser.require();
         Planta planta = intakeService.intake(user, file, null);
         return Map.of(
                 "filename", planta.getName(),

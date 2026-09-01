@@ -72,21 +72,22 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(req.password()));
         user.setRole(req.role() == null || req.role().isBlank() ? "engenheiro" : req.role());
         user = userRepository.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()), UserDto.from(user));
     }
 
     @Transactional
     public AuthResponse login(LoginRequest req) {
         String email = req.email() == null ? "" : req.email().toLowerCase().trim();
 
-        // Set RLS context FIRST, before any DB access. The RlsDataSourceWrapper
-        // reads this ThreadLocal when obtaining a Connection and applies
-        // SET LOCAL automatically. This must happen before any repository call
-        // or EntityManager query so that ALL connections in this transaction
-        // (including those used by AuditService with REQUIRED propagation)
-        // have the correct RLS variables set.
+        // Set RLS context in ThreadLocal AND force SET LOCAL inside THIS transaction.
+        // The RlsDataSourceWrapper may skip SET LOCAL if getConnection() was called
+        // before autoCommit=false (timing issue with Spring proxy). Explicit SET LOCAL
+        // here guarantees the variable is set within the active transaction.
         if (!email.isEmpty()) {
             RlsContext.setEmail(email);
+            String safeEmail = email.replace("'", "''");
+            entityManager.createNativeQuery("SET LOCAL app.current_user_email = '" + safeEmail + "'")
+                    .executeUpdate();
         }
 
         loginAttempts.checkNotLocked(email);
@@ -104,6 +105,6 @@ public class AuthService {
 
         loginAttempts.reset(email);
         auditService.logLoginSuccess(user.getId(), user.getEmail());
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()), UserDto.from(user));
     }
 }

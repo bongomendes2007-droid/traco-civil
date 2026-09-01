@@ -1,16 +1,16 @@
 package br.com.traco.api.service;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 /**
  * Serviço de auditoria para registrar eventos de segurança e ações críticas.
@@ -19,39 +19,46 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * - NUNCA logar senhas, tokens JWT, ou dados sensíveis em texto claro no campo details.
  * - IPs são armazenados mas devem ser anonimizados em produção (LGPD).
  *
- * IMPLEMENTAÇÃO RLS + REQUIRES_NEW:
+ * IMPLEMENTAÇÃO RLS:
  * O INSERT é feito via função PostgreSQL SECURITY DEFINER (insert_audit_log),
  * que roda com privilégios do owner (postgres) e bypassa RLS de forma segura.
  *
- * A transação é aberta PROGRAMATICAMENTE via TransactionTemplate com
- * PROPAGATION_REQUIRES_NEW para garantir que o audit_log persista mesmo
- * se a transação principal do caller sofrer rollback (ex: login com senha errada).
- * A anotação @Transactional(REQUIRES_NEW) não funcionava corretamente neste
- * cenário devido ao proxy do Spring — TransactionTemplate é mais confiável.
+ * CONEXÃO INDEPENDENTE (Opção D):
+ * O audit usa uma conexão JDBC própria (fora do EntityManager/Spring TX) com
+ * autoCommit=true. Isso garante que o INSERT persista mesmo quando o caller
+ * faz rollback (ex: login com senha errada lança ApiException → Spring dá
+ * rollback na transação principal, mas o audit já foi commitado separadamente).
+ * O Supabase Transaction Pooler não suporta REQUIRES_NEW de forma confiável,
+ * então esta abordagem de conexão independente é a alternativa correta.
+ * A função SECURITY DEFINER não precisa de SET LOCAL / contexto RLS.
  */
 @Service
 public class AuditService {
 
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private static final String INSERT_AUDIT_SQL =
+            "SELECT insert_audit_log(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private final TransactionTemplate txTemplate;
+    private final DataSource dataSource;
 
-    public AuditService(PlatformTransactionManager transactionManager) {
-        this.txTemplate = new TransactionTemplate(transactionManager);
-        this.txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    /**
+     * Injeta o DataSource RAW (não wrappeado pelo RlsDataSourceWrapper) para garantir
+     * que a conexão de auditoria esteja 100% fora do contexto RLS/transacional do Spring.
+     * O bean "rawDataSource" é registrado pelo RlsDataSourcePostProcessor antes do wrap.
+     */
+    public AuditService(@Qualifier("rawDataSource") DataSource dataSource) {
+        this.dataSource = dataSource;
+        log.info("AuditService DataSource class: {}", dataSource.getClass().getName());
     }
 
     /**
-     * Registra evento de auditoria em transação independente (REQUIRES_NEW)
-     * usando função SECURITY DEFINER que bypassa RLS.
+     * Registra evento de auditoria numa conexão JDBC independente (autoCommit=true),
+     * fora da transação do caller. Persiste mesmo se o caller fizer rollback.
+     * Best-effort: erros são logados mas não quebram o fluxo principal.
      */
     public void logEvent(String eventType, String severity, Long userId, String userEmail,
                          String resource, String action, String details, boolean success) {
-        // Extrair IP e User-Agent ANTES de abrir a nova transação,
-        // pois RequestContextHolder pode não estar disponível dentro dela.
         String ipAddress = null;
         String userAgent = null;
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -61,30 +68,32 @@ public class AuditService {
             userAgent = truncate(request.getHeader("User-Agent"), 500);
         }
 
-        final String fIpAddress = ipAddress;
-        final String fUserAgent = userAgent;
+        log.info("logEvent CHAMADO: action={} | email={} | success={}", action, userEmail, success);
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(INSERT_AUDIT_SQL)) {
 
-        try {
-            txTemplate.executeWithoutResult(status -> {
-                entityManager.createNativeQuery(
-                        "SELECT insert_audit_log(:eventType, :severity, :userId, :userEmail, " +
-                        ":ipAddress, :userAgent, :resource, :action, :details, :success)")
-                        .setParameter("eventType", eventType)
-                        .setParameter("severity", severity)
-                        .setParameter("userId", userId)
-                        .setParameter("userEmail", userEmail)
-                        .setParameter("ipAddress", fIpAddress)
-                        .setParameter("userAgent", fUserAgent)
-                        .setParameter("resource", resource)
-                        .setParameter("action", action)
-                        .setParameter("details", sanitize(details))
-                        .setParameter("success", success)
-                        .getSingleResult();
-            });
-            log.debug("Audit logged: {} | user={} | success={}", eventType, userEmail, success);
+            // autoCommit=true por padrão numa conexão nova do pool;
+            // o INSERT é commitado imediatamente ao executar.
+            ps.setString(1, eventType);
+            ps.setString(2, severity);
+            if (userId != null) {
+                ps.setLong(3, userId);
+            } else {
+                ps.setNull(3, java.sql.Types.BIGINT);
+            }
+            ps.setString(4, userEmail);
+            ps.setString(5, ipAddress);
+            ps.setString(6, userAgent);
+            ps.setString(7, resource);
+            ps.setString(8, action);
+            ps.setString(9, sanitize(details));
+            ps.setBoolean(10, success);
+
+            ps.execute();
+            log.info("insert_audit_log EXECUTADO (conexão independente): action={} | email={}", action, userEmail);
         } catch (Exception e) {
-            // Auditoria não deve quebrar o fluxo principal
-            log.error("Failed to write audit log: {}", e.getMessage());
+            // Auditoria não deve quebrar o fluxo principal — stacktrace COMPLETO para debug
+            log.error("Audit insert failed: action={} email={}", action, userEmail, e);
         }
     }
 
