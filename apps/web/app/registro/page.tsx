@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { login } from "@/lib/api";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Github, ShieldCheck } from "lucide-react";
+import { register } from "@/lib/api";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User, ShieldCheck } from "lucide-react";
 
 const ACCENT = "#ff5a1f";
 
@@ -27,60 +27,51 @@ const VALUE_POINTS = [
   },
 ];
 
-function sanitizeRedirect(path: string | null): string {
-  if (!path) return "/dashboard";
-  // Must start with "/" but not "//" (protocol-relative URL)
-  // and must not contain ":" (scheme like javascript: or https:)
-  if (path.startsWith("/") && !path.startsWith("//") && !path.includes(":")) {
-    return path;
-  }
-  return "/dashboard";
-}
-
-function LoginForm() {
+function RegisterForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = sanitizeRedirect(searchParams.get("redirect"));
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(email, password);
-      router.push(redirectTo);
+      await register(name.trim(), email.trim(), password);
+      router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
       const message = err?.message || "";
-      const status = err?.status; // ApiError tem .status, erro de rede não tem
+      const status = err?.status;
 
-      if (message.includes("429") || message.includes("423") || message.toLowerCase().includes("muitas tentativas") || message.toLowerCase().includes("locked")) {
-        setError("Muitas tentativas de acesso. Aguarde alguns minutos antes de tentar novamente.");
-      } else if (status === 401) {
-        // Credenciais inválidas confirmadas pelo backend
-        setError("E-mail ou senha incorretos.");
+      if (status === 409 || message.toLowerCase().includes("já cadastrado") || message.toLowerCase().includes("already exists") || message.toLowerCase().includes("duplicate")) {
+        setError("Este e-mail já está cadastrado. Faça login ou use outro e-mail.");
+      } else if (status === 400 || message.toLowerCase().includes("validation") || message.toLowerCase().includes("inválido")) {
+        setError("Verifique os dados informados e tente novamente.");
       } else {
-        // Qualquer outro erro: 502, 504, 500, ou erro de rede (TypeError sem status)
-        // Isso cobre o caso do Render "acordando" o serviço free tier.
-        setError("O servidor está iniciando, tente novamente em alguns segundos.");
+        setError("Não foi possível criar a conta. Tente novamente em alguns segundos.");
       }
     } finally {
       setLoading(false);
     }
-  }
-
-  function fillDemo() {
-    setEmail("demo@tracocivil.com.br");
-    setPassword("demo123");
-    setError(null);
   }
 
   return (
@@ -135,10 +126,10 @@ function LoginForm() {
       <section className="flex flex-col items-center justify-center p-14">
         <div className="w-full max-w-[400px]">
           <span className="inline-block font-mono text-[11px] font-bold tracking-[.1em] px-[11px] py-[5px] rounded-md mb-[22px]" style={{ background: ACCENT, color: "#111110" }}>
-            ACESSO
+            CADASTRO
           </span>
-          <h2 className="text-[34px] font-bold tracking-[-.02em] mb-2">Bem-vindo de volta</h2>
-          <p className="text-base text-[#5c5c58] mb-[30px]">Entre para acessar seus projetos e análises.</p>
+          <h2 className="text-[34px] font-bold tracking-[-.02em] mb-2">Crie sua conta</h2>
+          <p className="text-base text-[#5c5c58] mb-[30px]">Comece a analisar plantas em minutos.</p>
 
           {error && (
             <div className="mb-5 p-3 rounded-lg bg-[#fff0ea] border border-[#ffd9c2] text-sm text-[#b8360b] font-medium">
@@ -147,6 +138,20 @@ function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit}>
+            <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">NOME COMPLETO</label>
+            <div className="flex items-center gap-[11px] border-[1.5px] border-[#e2e0da] rounded-xl px-4 py-[14px] mb-5 focus-within:border-[#111110] transition-colors">
+              <User size={17} strokeWidth={2} className="text-[#9a9a95] flex-none" />
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Marina Santos"
+                maxLength={120}
+                className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
+              />
+            </div>
+
             <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">E-MAIL PROFISSIONAL</label>
             <div className="flex items-center gap-[11px] border-[1.5px] border-[#e2e0da] rounded-xl px-4 py-[14px] mb-5 focus-within:border-[#111110] transition-colors">
               <Mail size={17} strokeWidth={2} className="text-[#9a9a95] flex-none" />
@@ -156,19 +161,22 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="marina@escritorio.com.br"
+                maxLength={190}
                 className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
               />
             </div>
 
             <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">SENHA</label>
-            <div className="flex items-center gap-[11px] border-[1.5px] border-[#111110] rounded-xl px-4 py-[14px] mb-4">
-              <Lock size={17} strokeWidth={2} className="text-[#111110] flex-none" />
+            <div className="flex items-center gap-[11px] border-[1.5px] border-[#e2e0da] rounded-xl px-4 py-[14px] mb-5 focus-within:border-[#111110] transition-colors">
+              <Lock size={17} strokeWidth={2} className="text-[#9a9a95] flex-none" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+                maxLength={72}
                 className="bg-transparent border-none outline-none text-[18px] tracking-[3px] text-[#111110] placeholder:tracking-normal placeholder:text-[#9a9a95] w-full"
               />
               <button
@@ -181,26 +189,18 @@ function LoginForm() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-[14px]">
-              <label className="flex items-center gap-[9px] text-sm text-[#5c5c58] cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-[18px] h-[18px] rounded-[5px] border-[1.5px] border-[#cfcdc6] accent-[#ff5a1f] cursor-pointer"
-                />
-                Lembrar de mim
-              </label>
-              <span className="text-sm font-semibold cursor-not-allowed opacity-50" title="Em breve">Esqueci a senha</span>
+            <label className="block font-mono text-[11px] font-bold tracking-[.08em] text-[#6f6f69] mb-[9px]">CONFIRMAR SENHA</label>
+            <div className="flex items-center gap-[11px] border-[1.5px] border-[#e2e0da] rounded-xl px-4 py-[14px] mb-[22px] focus-within:border-[#111110] transition-colors">
+              <Lock size={17} strokeWidth={2} className="text-[#9a9a95] flex-none" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita a senha"
+                className="bg-transparent border-none outline-none text-[18px] tracking-[3px] text-[#111110] placeholder:tracking-normal placeholder:text-[#9a9a95] w-full"
+              />
             </div>
-
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="w-full bg-[#faf9f6] border border-[#ececea] rounded-[10px] px-[14px] py-[11px] mb-5 font-mono text-xs text-[#8a8a85] text-center hover:bg-[#f4f4f1] transition-colors"
-            >
-              Demo: demo@tracocivil.com.br · senha demo123
-            </button>
 
             <button
               type="submit"
@@ -208,27 +208,19 @@ function LoginForm() {
               className="flex items-center justify-center gap-[10px] w-full text-base font-bold py-4 rounded-xl mb-[14px] transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ background: ACCENT, color: "#111110" }}
             >
-              {loading ? "Entrando..." : (
+              {loading ? "Criando conta..." : (
                 <>
-                  Entrar
+                  Criar conta gratuita
                   <ArrowRight size={17} strokeWidth={2.4} />
                 </>
               )}
             </button>
-
-            <button
-              type="button"
-              className="flex items-center justify-center gap-[10px] w-full bg-[#111110] text-white text-[15px] font-semibold py-[15px] rounded-xl hover:bg-[#1a1a1a] transition-colors"
-            >
-              <Github size={17} fill="currentColor" />
-              Continuar com GitHub
-            </button>
           </form>
 
           <p className="text-center text-[15px] text-[#5c5c58] mt-[26px]">
-            Novo no TRAÇO CIVIL?{" "}
-            <Link href="/registro" className="font-bold text-[#111110] hover:text-[#ff5a1f] transition-colors">
-              Criar conta gratuita
+            Já tem conta?{" "}
+            <Link href="/login" className="font-bold text-[#111110] hover:text-[#ff5a1f] transition-colors">
+              Fazer login
             </Link>
           </p>
           <p className="text-center font-mono text-[11px] leading-[1.6] text-[#b2ada2] mt-[18px]">
@@ -242,10 +234,10 @@ function LoginForm() {
   );
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
-      <LoginForm />
+      <RegisterForm />
     </Suspense>
   );
 }

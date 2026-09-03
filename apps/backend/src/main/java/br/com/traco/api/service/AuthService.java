@@ -11,6 +11,7 @@ import br.com.traco.api.repo.UserRepository;
 import br.com.traco.api.security.JwtService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +72,12 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(req.password()));
         user.setRole(req.role() == null || req.role().isBlank() ? "engenheiro" : req.role());
-        user = userRepository.save(user);
+        try {
+            user = userRepository.save(user);
+            entityManager.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException("Este e-mail já está cadastrado.", 409);
+        }
         return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()), UserDto.from(user));
     }
 

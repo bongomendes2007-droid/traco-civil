@@ -123,6 +123,14 @@ export async function login(email: string, password: string): Promise<UserDto> {
   );
 }
 
+export async function register(name: string, email: string, password: string): Promise<UserDto> {
+  return request<UserDto>(
+    "/api/auth/register",
+    { method: "POST", body: JSON.stringify({ name, email, password }) },
+    false
+  );
+}
+
 export async function logout(): Promise<void> {
   return request<void>("/api/auth/logout", { method: "POST" }, false);
 }
