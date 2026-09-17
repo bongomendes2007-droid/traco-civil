@@ -87,6 +87,32 @@ def decode_image(data: bytes) -> np.ndarray:
 _LAST_MODE = "unknown"
 
 
+def _trim_white_borders(gray: np.ndarray) -> np.ndarray:
+    """Recorta bordas brancas ao redor do conteúdo.
+
+    Assets "isolated on white" têm margens brancas enormes que fazem o
+    contorno externo cair fora da faixa aceita (3%–94% da imagem) e diluem
+    o espaço interno detectável. Se o conteúdo ocupa menos de 85% da largura
+    ou altura, recorta para a bounding box do conteúdo não-branco.
+    """
+    # Máscara de "não-fundo": blur + threshold + abertura morfológica para
+    # ignorar o ruído de compressão JPG (specks isolados abaixo de 240).
+    blur = cv2.GaussianBlur(gray, (9, 9), 0)
+    content = (blur < 240).astype(np.uint8)
+    kernel = np.ones((15, 15), np.uint8)
+    content = cv2.morphologyEx(content, cv2.MORPH_OPEN, kernel)
+    if cv2.countNonZero(content) == 0:
+        return gray  # página toda branca — deixa o pipeline rejeitar
+    x, y, w, h = cv2.boundingRect(content)
+    H, W = gray.shape[:2]
+    # Só recorta se de fato houver margem significativa (>15% de folga)
+    if w < 0.85 * W or h < 0.85 * H:
+        # Guarda de sanidade: conteúdo mínimo (evita recortar em ruído)
+        if w >= 50 and h >= 50:
+            return gray[y:y + h, x:x + w]
+    return gray
+
+
 def _try_vectorial(data: bytes, scale: int, dpi: int) -> dict[str, Any] | None:
     """Tenta extração vetorial determinística de um PDF.
 
@@ -230,6 +256,14 @@ def _try_vectorial(data: bytes, scale: int, dpi: int) -> dict[str, Any] | None:
         openings = rooms_count + 2
         confidence = min(0.99, 0.90 + 0.01 * min(len(segments) / 50, 5))
 
+        # --- Sanity check: rejeitar documentos que não são plantas ---
+        # Um PDF de texto (ex: página de licença) pode ter >10 segmentos de
+        # reta (linhas de tabela, sublinhados, bordas) sem ser uma planta.
+        # Uma planta real tem paredes horizontais E verticais formando
+        # divisões (h_segs/v_segs >= 2) e área plausível (5–5000 m²).
+        if len(h_segs) < 2 or len(v_segs) < 2 or not (5.0 <= area_m2 <= 5000.0):
+            return None  # deixa o caminho raster decidir (e provavelmente rejeitar)
+
         global _LAST_MODE
         _LAST_MODE = "vectorial"
 
@@ -299,7 +333,10 @@ def _binarize(gray: np.ndarray) -> np.ndarray:
     # mesmo que o spread p95-p5 seja alto (cinza-claro → branco).
     if lo < 40.0:
         _LAST_MODE = "otsu"
-        _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        # Median blur extra: ruído de compressão JPG cria specks que o Otsu
+        # transforma em "paredes" cobrindo a imagem toda (contorno ~100%).
+        den = cv2.medianBlur(blur, 7)
+        _, binary = cv2.threshold(den, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         return binary
     _LAST_MODE = "adaptive"
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
@@ -371,6 +408,16 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
     px2_per_m2 = px_per_m * px_per_m
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # --- Trim de bordas brancas: assets "isolated on white" têm margens
+    # brancas enormes que empurram o contorno externo para fora da faixa
+    # aceita (3%–94% da imagem) e diluem o espaço interno. Recorta a
+    # bounding box do conteúdo não-branco antes da binarização. ---
+    gray = _trim_white_borders(gray)
+    # h/w pós-trim (a faixa 3%–94% e o min_room_px dependem das dimensões reais)
+    h, w = gray.shape[:2]
+    image_area = float(h * w)
+
     walls = _binarize(gray)
 
     kernel = np.ones((3, 3), np.uint8)
@@ -380,13 +427,26 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
     if not contours:
         return {"ok": False, "reason": "Nenhuma estrutura de paredes detectada."}
 
-    image_area = float(h * w)
     exterior = None
     for c in sorted(contours, key=cv2.contourArea, reverse=True):
         a = cv2.contourArea(c)
-        if image_area * 0.03 < a < image_area * 0.94:
+        if image_area * 0.03 < a < image_area * 0.995:
             exterior = c
             break
+    if exterior is None:
+        # --- Fallback Canny: binarização primária (Otsu/adaptive) não achou
+        # contorno válido — comum em rasters "isolated on white" de linhas
+        # finas. Tenta detecção de bordas antes de rejeitar. ---
+        walls_canny = cv2.morphologyEx(
+            _binarize_canny(gray), cv2.MORPH_CLOSE, kernel, iterations=2)
+        contours_c, _ = cv2.findContours(
+            walls_canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in sorted(contours_c, key=cv2.contourArea, reverse=True):
+            a = cv2.contourArea(c)
+            if image_area * 0.03 < a < image_area * 0.995:
+                exterior = c
+                walls = walls_canny
+                break
     if exterior is None:
         return {"ok": False, "reason": "Contorno externo da planta não identificado."}
 
@@ -441,7 +501,7 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
         exterior_c = None
         for c in sorted(contours_c, key=cv2.contourArea, reverse=True):
             a = cv2.contourArea(c)
-            if image_area * 0.03 < a < image_area * 0.94:
+            if image_area * 0.03 < a < image_area * 0.995:
                 exterior_c = c
                 break
         if exterior_c is not None:
@@ -480,6 +540,16 @@ def run_pipeline(data: bytes, filename: str, scale: int, dpi: int) -> dict[str, 
                 openings = len(rooms) + 2
                 confidence = min(0.85, 0.70 + 0.03 * len(rooms))
                 # mode já foi setado para "canny_fallback" dentro de _binarize_canny
+
+    # --- Sanity check: rejeitar documentos que não são plantas ---
+    # Documentos com blocos de texto/tabelas (ex: página de licença em PDF)
+    # podem gerar contorno + "cômodos" espúrios com confiança alta. Uma
+    # planta residencial real tem ao menos 2 ambientes e área plausível
+    # (5–5000 m²); abaixo disso, rejeita de forma consistente.
+    if len(rooms) < 2 or not (5.0 <= area_m2 <= 5000.0):
+        return {"ok": False, "reason": "Estrutura de planta não identificada "
+                f"(ambientes={len(rooms)}, area={round(area_m2, 1)} m²). "
+                "Envie uma planta baixa (PDF/PNG/JPG) com paredes visíveis."}
 
     return {
         "ok": True,

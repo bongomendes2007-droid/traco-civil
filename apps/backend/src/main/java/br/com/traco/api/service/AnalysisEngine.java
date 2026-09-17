@@ -82,6 +82,9 @@ public class AnalysisEngine {
         analysis.setProject(planta.getProject());
         analysis.setCode(nextCode(planta.getId()));
         analysis.setAnalysisMode("ia"); // default; sobrescrito se cair no simulador
+        // Motivo exato da falha (reason do 422 do worker / erro interno) —
+        // propagado até o audit_log para diagnóstico sem depender de log do Render.
+        final String[] failureReason = {null};
         log.info("ENGINE: análise criada com code={}", analysis.getCode());
 
         long start = System.currentTimeMillis();
@@ -89,7 +92,8 @@ public class AnalysisEngine {
         String name = planta.getName() == null ? "" : planta.getName().toLowerCase();
         if (name.contains("fachada") || name.contains("fasade")) {
             log.info("ENGINE: arquivo de fachada detectado — marcando como erro.");
-            failAnalysis(planta, analysis, start, "Arquivo de fachada não suportado para análise de quantitativos.");
+            failureReason[0] = "Arquivo de fachada não suportado para análise de quantitativos.";
+            failAnalysis(planta, analysis, start, failureReason[0]);
             return;
         }
 
@@ -109,11 +113,13 @@ public class AnalysisEngine {
             }
         } catch (ComputerVisionClient.CvRejectedException e) {
             log.warn("ENGINE: worker rejeitou o arquivo: {}", e.getMessage());
-            failAnalysis(planta, analysis, start, "Worker recusou o arquivo: " + safe(e.getMessage()));
+            failureReason[0] = "Worker recusou o arquivo: " + safe(e.getMessage());
+            failAnalysis(planta, analysis, start, failureReason[0]);
             return;
         } catch (Exception e) {
             log.error("ENGINE: exceção inesperada ao chamar worker: {}", e.getMessage(), e);
-            failAnalysis(planta, analysis, start, "Erro interno ao processar planta: " + safe(e.getMessage()));
+            failureReason[0] = "Erro interno ao processar planta: " + safe(e.getMessage());
+            failAnalysis(planta, analysis, start, failureReason[0]);
             return;
         }
 
@@ -140,8 +146,8 @@ public class AnalysisEngine {
             // ---- worker offline: política híbrida ----
             if (isProd()) {
                 // Produção: NUNCA mascarar com dados falsos.
-                failAnalysis(planta, analysis, start,
-                        "Worker de IA indisponível — análise real não pôde ser feita. Verifique o serviço de visão computacional.");
+                failureReason[0] = "Worker de IA indisponível — análise real não pôde ser feita. Verifique o serviço de visão computacional.";
+                failAnalysis(planta, analysis, start, failureReason[0]);
                 return;
             }
             // Dev: simulador determinístico, marcado explicitamente como "simulado".
@@ -204,7 +210,7 @@ public class AnalysisEngine {
         plantaRepository.save(planta);
         analysisRepository.save(analysis);
 
-        auditAnalysis(planta, analysis, cost);
+        auditAnalysis(planta, analysis, cost, null);
     }
 
     /** Marca planta + análise como erro com mensagem clara e registra auditoria. */
@@ -213,13 +219,14 @@ public class AnalysisEngine {
         analysis.setStatus("erro");
         analysis.setDurationSeconds(secondsSince(startMs));
         analysis.setConfidence(0);
-        // Mantém analysisMode="ia" (não foi simulado) — o motivo fica claro pelo status+auditoria.
+        // Mantém analysisMode="ia" (não foi simulado) — o motivo exato fica registrado
+        // no audit_log (details) para diagnóstico sem depender de log do Render.
         plantaRepository.save(planta);
         analysisRepository.save(analysis);
-        auditAnalysis(planta, analysis, 0d);
+        auditAnalysis(planta, analysis, 0d, reason);
     }
 
-    private void auditAnalysis(Planta planta, Analysis analysis, double cost) {
+    private void auditAnalysis(Planta planta, Analysis analysis, double cost, String failureReason) {
         String userEmail = planta.getProject() != null && planta.getProject().getUser() != null
                 ? planta.getProject().getUser().getEmail() : null;
         Long userId = planta.getProject() != null && planta.getProject().getUser() != null
@@ -227,7 +234,11 @@ public class AnalysisEngine {
         if ("concluida".equals(analysis.getStatus())) {
             auditService.logAnalysisCompleted(userId, userEmail, analysis.getId(), cost);
         } else if ("erro".equals(analysis.getStatus())) {
-            auditService.logAnalysisFailed(userId, userEmail, analysis.getId(), "WORKER_OFFLINE_OR_REJECTED");
+            // Registra o motivo EXATO (reason do 422 do worker / erro interno),
+            // não apenas o enum genérico — era a lacuna de observabilidade.
+            String reason = failureReason != null && !failureReason.isBlank()
+                    ? failureReason : "WORKER_OFFLINE_OR_REJECTED";
+            auditService.logAnalysisFailed(userId, userEmail, analysis.getId(), reason);
         }
     }
 
