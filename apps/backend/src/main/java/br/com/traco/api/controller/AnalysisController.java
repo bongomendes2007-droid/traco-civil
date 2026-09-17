@@ -70,7 +70,7 @@ public class AnalysisController {
                 "concrete_volume", round2(area * 0.2276),
                 "steel_weight", round2(area * 0.0335),
                 "masonry_area", round2(area * 1.0687),
-                "estimated_cost", a.getEstimatedCost() != null ? a.getEstimatedCost() : round2(area * 2016.41),
+                "estimated_cost", a.getEstimatedCost(),
                 "margin_percent", 8.0,
                 "confidence_score", (a.getConfidence() != null ? a.getConfidence() : 95) / 100.0));
     }

@@ -4,7 +4,10 @@ import br.com.traco.api.model.Analysis;
 import br.com.traco.api.model.Planta;
 import br.com.traco.api.repo.AnalysisRepository;
 import br.com.traco.api.repo.PlantaRepository;
+import br.com.traco.api.service.OrcamentoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -31,11 +34,14 @@ import java.util.Optional;
 @Service
 public class AnalysisEngine {
 
+    private static final Logger log = LoggerFactory.getLogger(AnalysisEngine.class);
+
     private final PlantaRepository plantaRepository;
     private final AnalysisRepository analysisRepository;
     private final ObjectMapper objectMapper;
     private final ComputerVisionClient cvClient;
     private final AuditService auditService;
+    private final OrcamentoService orcamentoService;
 
     /** Perfil Spring ativo. "prod" => erro quando worker offline; outro => simulador. */
     @Value("${spring.profiles.active:default}")
@@ -45,47 +51,69 @@ public class AnalysisEngine {
                           AnalysisRepository analysisRepository,
                           ObjectMapper objectMapper,
                           ComputerVisionClient cvClient,
-                          AuditService auditService) {
+                          AuditService auditService,
+                          OrcamentoService orcamentoService) {
         this.plantaRepository = plantaRepository;
         this.analysisRepository = analysisRepository;
         this.objectMapper = objectMapper;
         this.cvClient = cvClient;
         this.auditService = auditService;
+        this.orcamentoService = orcamentoService;
     }
 
     private boolean isProd() {
         return "prod".equalsIgnoreCase(activeProfile == null ? "" : activeProfile.trim());
     }
 
-    @Async
+    @Async("rlsAwareExecutor")
     @Transactional
     public void process(Long plantaId) {
+        log.info("ENGINE: process() iniciado para plantaId={}", plantaId);
+
         Planta planta = plantaRepository.findById(plantaId).orElse(null);
-        if (planta == null) return;
+        if (planta == null) {
+            log.warn("ENGINE: plantaId={} não encontrada no banco — abortando.", plantaId);
+            return;
+        }
+        log.info("ENGINE: planta encontrada: name={}, storagePath={}", planta.getName(), planta.getStoragePath());
 
         Analysis analysis = new Analysis();
         analysis.setPlanta(planta);
         analysis.setProject(planta.getProject());
-        analysis.setCode(nextCode());
+        analysis.setCode(nextCode(planta.getId()));
         analysis.setAnalysisMode("ia"); // default; sobrescrito se cair no simulador
+        log.info("ENGINE: análise criada com code={}", analysis.getCode());
 
         long start = System.currentTimeMillis();
 
         String name = planta.getName() == null ? "" : planta.getName().toLowerCase();
         if (name.contains("fachada") || name.contains("fasade")) {
+            log.info("ENGINE: arquivo de fachada detectado — marcando como erro.");
             failAnalysis(planta, analysis, start, "Arquivo de fachada não suportado para análise de quantitativos.");
             return;
         }
 
         ComputerVisionClient.CvResult cv = null;
         boolean workerOffline = false;
+        log.info("ENGINE: chamando ComputerVisionClient.analyze() para storagePath={}", planta.getStoragePath());
         try {
             Optional<ComputerVisionClient.CvResult> r =
                     cvClient.analyze(planta.getStoragePath(), planta.getName());
-            if (r.isPresent()) cv = r.get();
-            else workerOffline = true; // Optional.empty() => worker inacessível / fallback
+            if (r.isPresent()) {
+                cv = r.get();
+                log.info("ENGINE: worker retornou resultado: area={}, rooms={}, confidence={}",
+                        cv.areaM2(), cv.roomsCount(), cv.confidence());
+            } else {
+                workerOffline = true; // Optional.empty() => worker inacessível / fallback
+                log.warn("ENGINE: worker offline (Optional.empty) — caindo em política híbrida.");
+            }
         } catch (ComputerVisionClient.CvRejectedException e) {
+            log.warn("ENGINE: worker rejeitou o arquivo: {}", e.getMessage());
             failAnalysis(planta, analysis, start, "Worker recusou o arquivo: " + safe(e.getMessage()));
+            return;
+        } catch (Exception e) {
+            log.error("ENGINE: exceção inesperada ao chamar worker: {}", e.getMessage(), e);
+            failAnalysis(planta, analysis, start, "Erro interno ao processar planta: " + safe(e.getMessage()));
             return;
         }
 
@@ -107,6 +135,7 @@ public class AnalysisEngine {
             boxesJson = cv.boxesJson();
             duration = Math.max(1, secondsSince(start));
             analysis.setAnalysisMode("ia");
+            analysis.setRoomsDetail(cv.roomsDetail());
         } else {
             // ---- worker offline: política híbrida ----
             if (isProd()) {
@@ -132,11 +161,18 @@ public class AnalysisEngine {
             duration = (int) (8 + (seed % 18));        // 8 – 25 s
         }
 
-        double concrete = round2(area * 0.2276);
-        double steel = round2(area * 0.0335);
-        double masonry = round2(area * 1.0687);
-        double forms = round2(area * 2.0028);
-        double cost = round2(area * 2016.41);
+        // --- Quantitativos para orçamento SINAPI (Fase 3) ---
+        // Alvenaria e fôrma usam wallLengthM real do worker; concreto e aço usam coeficientes por área.
+        // Altura padrão 2.80m (NBR 15575) — editável na Fase 1.
+        double floorHeight = 2.80;
+        double concrete = round2(area * 0.2276);                              // m³ (coeficiente paramétrico)
+        double steel = round2(area * 0.0335);                                 // ton (coeficiente paramétrico)
+        double masonry = round2(wallLength * floorHeight);                    // m² (perímetro × altura)
+        double forms = round2(wallLength * floorHeight * 0.40);               // m² (40% do perímetro = estrutural)
+
+        // Custo SINAPI real substitui heurística area × 2016.41
+        // UF temporária "PI" — será parâmetro do usuário na Fase 2
+        double cost = orcamentoService.calcularOrcamento(area, wallLength, "PI");
 
         planta.setStatus("concluida");
         planta.setArea(area);
@@ -149,6 +185,8 @@ public class AnalysisEngine {
         analysis.setRooms(rooms);
         analysis.setEstimatedCost(cost);
         analysis.setBoxesJson(boxesJson);
+        // roomsDetail permanece null em modo simulado — o frontend exibe
+        // mensagem de erro neutra (P6) em vez de dados inventados.
         analysis.setElementsJson(json(List.of(
                 Map.of("label", "Pilares", "value", String.valueOf(Math.max(1, Math.round(area / 6)))),
                 Map.of("label", "Vigas", "value", String.valueOf(Math.max(1, Math.round(area / 3.9)))),
@@ -201,19 +239,13 @@ public class AnalysisEngine {
         return (int) Math.max(1, (System.currentTimeMillis() - startMs) / 1000);
     }
 
-    private String nextCode() {
-        int max = analysisRepository.allCodes().stream()
-                .map(c -> c.replace("ANL-", "").trim())
-                .mapToInt(s -> {
-                    try {
-                        return Integer.parseInt(s);
-                    } catch (NumberFormatException e) {
-                        return 0;
-                    }
-                })
-                .max()
-                .orElse(0);
-        return String.format("ANL-%04d", max + 1);
+    /**
+     * Gera código único baseado no plantaId — imune a RLS e a análises órfãs.
+     * Formato: ANL-{plantaId} garante unicidade global sem depender de queries
+     * na tabela analyses (que são filtradas pelo RLS do Supabase).
+     */
+    private String nextCode(Long plantaId) {
+        return String.format("ANL-%04d", plantaId);
     }
 
     private String json(List<Map<String, String>> data) {
