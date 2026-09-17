@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 
 /**
@@ -24,7 +26,8 @@ public class SinapiComposicaoCusto {
     @Column(name = "composicao_id", nullable = false)
     private Long composicaoId;
 
-    @Column(nullable = false, columnDefinition = "char(2)")
+    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String uf;
 
     @Column(nullable = false)
