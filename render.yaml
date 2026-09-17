@@ -30,16 +30,22 @@ services:
       - key: JWT_SECRET
         generateValue: true
       # Token interno compartilhado com o worker traco-ai.
-      # ATENÇÃO: após o 1º deploy, copie o valor gerado aqui para o traco-ai manualmente
-      # (o Blueprint não consegue sincronizar generateValue entre dois serviços).
+      # IMPORTANTE: o Blueprint do Render NÃO sincroniza valores entre serviços
+      # (generateValue geraria tokens DIFERENTES em traco-api e traco-ai, causando
+      # HTTP 401 e falha de análise). Por isso usamos sync: false: o valor deve ser
+      # definido MANUALMENTE no painel, IGUAL nos dois serviços:
+      #   traco-api  -> Environment -> WORKER_TOKEN = <valor>
+      #   traco-ai   -> Environment -> WORKER_TOKEN = <mesmo valor>
+      # Gere um valor forte com: openssl rand -hex 32
+      # sync: false impede que o Blueprint sobrescreva o valor definido no painel.
       - key: WORKER_TOKEN
-        generateValue: true
+        sync: false
       # URL do frontend (ajuste para a URL real da Vercel antes de aplicar)
       - key: CORS_ORIGINS
         value: https://traco-civil.vercel.app
-      # URL interna do worker de IA
+      # URL do worker de IA (serviço real em produção: traco-ai-new)
       - key: AI_SERVICE_URL
-        value: https://traco-ai.onrender.com
+        value: https://traco-ai-new.onrender.com
       # Usuario e senha lidos de vars separadas pelo application-prod.properties.
       - key: DATABASE_USERNAME
         fromDatabase:
@@ -63,7 +69,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn worker:app --host 0.0.0.0 --port $PORT
     envVars:
-      # TEM que bater com o WORKER_TOKEN do traco-api. Defina manualmente no painel
-      # com o MESMO valor gerado/definido no traco-api após o primeiro deploy.
+      # TEM que bater com o WORKER_TOKEN do traco-api (valor definido manualmente
+      # no painel, IGUAL nos dois serviços — veja comentário no bloco do traco-api).
+      # sync: false impede que o Blueprint sobrescreva o valor definido no painel.
       - key: WORKER_TOKEN
-        generateValue: true
+        sync: false
