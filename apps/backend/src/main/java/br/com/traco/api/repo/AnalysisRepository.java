@@ -28,6 +28,12 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 
     Optional<Analysis> findFirstByPlantaId(Long plantaId);
 
-    @Query("select a.code from Analysis a")
-    List<String> allCodes();
+    /**
+     * Retorna o maior ID existente na tabela analyses, independente de RLS.
+     * Usado para gerar códigos sequenciais globais (ANL-XXXX) sem risco de
+     * duplicata quando análises anteriores falharam antes de salvar ou quando
+     * o RLS filtra registros de outros usuários.
+     */
+    @Query(value = "SELECT COALESCE(MAX(id), 0) FROM analyses", nativeQuery = true)
+    Long maxId();
 }

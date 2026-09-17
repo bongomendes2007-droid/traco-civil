@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import br.com.traco.api.dto.RoomDetail;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,6 +16,8 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,7 +44,8 @@ public class ComputerVisionClient {
                            double wallLengthM,
                            int openings,
                            double confidence,
-                           String boxesJson) {}
+                           String boxesJson,
+                           List<RoomDetail> roomsDetail) {}
 
     public static class CvRejectedException extends RuntimeException {
         public CvRejectedException(String message) {
@@ -105,13 +110,27 @@ public class ComputerVisionClient {
                     throw new CvRejectedException(
                             n.path("reason").asText("A IA não conseguiu ler esta planta."));
                 }
+                // Parse per-room details from worker response
+                List<RoomDetail> roomsDetail = new ArrayList<>();
+                JsonNode roomsNode = n.path("rooms");
+                if (roomsNode.isArray()) {
+                    for (int i = 0; i < roomsNode.size(); i++) {
+                        JsonNode r = roomsNode.get(i);
+                        String name = r.path("name").asText("Ambiente " + (i + 1));
+                        double roomArea = r.path("area_m2").asDouble(0);
+                        double roomConf = r.path("confidence").asDouble(n.path("confidence").asDouble(0));
+                        roomsDetail.add(new RoomDetail(name, roomArea, roomConf));
+                    }
+                }
+
                 return Optional.of(new CvResult(
                         n.path("area_m2").asDouble(0),
                         n.path("rooms_count").asInt(0),
                         n.path("wall_length_m").asDouble(0),
                         n.path("openings").asInt(0),
                         n.path("confidence").asDouble(0),
-                        objectMapper.writeValueAsString(n.path("rooms"))));
+                        objectMapper.writeValueAsString(roomsNode),
+                        roomsDetail));
             }
             if (response.statusCode() == 422) {
                 JsonNode n = objectMapper.readTree(response.body());

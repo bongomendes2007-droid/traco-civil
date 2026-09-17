@@ -8,7 +8,7 @@ import { Maximize2, RefreshCw, Download, ArrowRight, AlertTriangle, DollarSign, 
 const ACCENT = "#ff5a1f";
 
 function br(value: number | null | undefined, fractionDigits = 2): string {
-  if (value == null) return "—";
+  if (value == null) return "–";
   return value.toLocaleString("pt-BR", { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
 }
 
@@ -57,10 +57,10 @@ export default function DashboardPage() {
                 <span
                   className="inline-flex items-center gap-[6px] font-mono text-[11px] font-bold tracking-[.06em] px-[10px] py-[5px] rounded-md whitespace-nowrap"
                   style={{ background: "#c0392b", color: "#ffffff" }}
-                  title="Worker de IA indisponível — dados gerados pelo simulador, NÃO refletem a planta real."
+                  title="Não foi possível processar esta análise agora. Tente novamente em alguns instantes ou entre em contato com o suporte."
                 >
                   <AlertOctagon size={13} strokeWidth={2.4} />
-                  MODO SIMULADO
+                  ERRO NO PROCESSAMENTO
                 </span>
               ) : (
                 <span
@@ -74,7 +74,7 @@ export default function DashboardPage() {
                 {loading
                   ? "Buscando última análise..."
                   : analysis
-                    ? `Detecção automática · ${analysis.rooms ?? "—"} ambientes identificados`
+                    ? `Detecção automática · ${analysis.rooms ?? "–"} ambientes identificados`
                     : "Nenhuma análise encontrada"}
               </span>
             </div>
@@ -93,9 +93,7 @@ export default function DashboardPage() {
             <div className="flex items-start gap-3 px-5 py-3 bg-[#fdecea] border-b border-[#f5c6cb]">
               <AlertOctagon size={18} className="flex-none mt-[1px]" style={{ color: "#c0392b" }} strokeWidth={2} />
               <p className="text-[13px] leading-[1.5] text-[#92231a] m-0">
-                <span className="font-bold">Worker de IA indisponível.</span> Os números abaixo foram gerados pelo
-                simulador determinístico e <span className="font-bold">NÃO refletem a planta enviada</span>. Suba o
-                serviço de visão computacional (packages/ai) para uma análise real.
+                Não foi possível processar esta análise agora. Tente novamente em alguns instantes ou entre em contato com o suporte.
               </p>
             </div>
           )}
@@ -114,10 +112,14 @@ export default function DashboardPage() {
               <rect x="305" y="34" width="70" height="20" rx="4" fill="#faf7f2"/>
               <text x="340" y="48" fontFamily="Space Mono, monospace" fontSize="11" fill="#6f6f69" textAnchor="middle">15,00 m</text>
 
-              <rect x="62" y="82" width="276" height="156" fill={ACCENT} opacity="0.06"/>
-              <rect x="342" y="82" width="276" height="156" fill={ACCENT} opacity="0.06"/>
-              <rect x="62" y="242" width="276" height="156" fill={ACCENT} opacity="0.06"/>
-              <rect x="342" y="242" width="276" height="156" fill={ACCENT} opacity="0.06"/>
+              {/* Dynamic room highlight fills from API data (max 4) */}
+              {(analysis?.roomsDetail ?? []).slice(0, 4).map((_, i) => {
+                const col = i % 2;
+                const row = Math.floor(i / 2);
+                const x = col === 0 ? 62 : 342;
+                const y = row === 0 ? 82 : 242;
+                return <rect key={`fill-${i}`} x={x} y={y} width="276" height="156" fill={ACCENT} opacity="0.06"/>;
+              })}
 
               <rect x="60" y="80" width="560" height="320" stroke="#3a382f" strokeWidth="4"/>
               <path d="M340 80 V400 M60 240 H620" stroke="#3a382f" strokeWidth="4"/>
@@ -126,10 +128,14 @@ export default function DashboardPage() {
               <path d="M180 80 H250" stroke="#faf7f2" strokeWidth="4"/><path d="M180 80 H250" stroke="#3a382f" strokeWidth="1.2"/>
               <path d="M430 80 H500" stroke="#faf7f2" strokeWidth="4"/><path d="M430 80 H500" stroke="#3a382f" strokeWidth="1.2"/>
 
-              <rect x="66" y="86" width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>
-              <rect x="346" y="86" width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>
-              <rect x="66" y="246" width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>
-              <rect x="346" y="246" width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>
+              {/* Dynamic room highlight strokes from API data (max 4) */}
+              {(analysis?.roomsDetail ?? []).slice(0, 4).map((_, i) => {
+                const col = i % 2;
+                const row = Math.floor(i / 2);
+                const x = col === 0 ? 66 : 346;
+                const y = row === 0 ? 86 : 246;
+                return <rect key={`stroke-${i}`} x={x} y={y} width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>;
+              })}
 
               <g fill={ACCENT}>
                 <rect x="54" y="74" width="12" height="12"/><rect x="334" y="74" width="12" height="12"/><rect x="614" y="74" width="12" height="12"/>
@@ -137,39 +143,46 @@ export default function DashboardPage() {
                 <rect x="54" y="394" width="12" height="12"/><rect x="334" y="394" width="12" height="12"/><rect x="614" y="394" width="12" height="12"/>
               </g>
 
-              <text x="200" y="164" fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">SALA DE ESTAR</text>
-              <text x="200" y="182" fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">28,50 m²</text>
-              <text x="480" y="164" fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">SUÍTE 01</text>
-              <text x="480" y="182" fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">22,40 m²</text>
-              <text x="200" y="324" fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">COZINHA</text>
-              <text x="200" y="342" fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">16,20 m²</text>
-              <text x="480" y="324" fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">BANHEIRO</text>
-              <text x="480" y="342" fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">8,60 m²</text>
-
-              <g>
-                <rect x="74" y="96" width="86" height="22" rx="5" fill="#111110"/>
-                <text x="84" y="111" fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">Sala Estar</text>
-                <rect x="164" y="96" width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
-                <text x="184" y="111" fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">{analysis?.confidence ?? 98}%</text>
-              </g>
-              <g>
-                <rect x="354" y="96" width="72" height="22" rx="5" fill="#111110"/>
-                <text x="364" y="111" fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">Suíte 01</text>
-                <rect x="430" y="96" width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
-                <text x="450" y="111" fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">99%</text>
-              </g>
-              <g>
-                <rect x="74" y="256" width="72" height="22" rx="5" fill="#111110"/>
-                <text x="84" y="271" fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">Cozinha</text>
-                <rect x="150" y="256" width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
-                <text x="170" y="271" fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">96%</text>
-              </g>
-              <g>
-                <rect x="354" y="256" width="78" height="22" rx="5" fill="#111110"/>
-                <text x="364" y="271" fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">Banheiro</text>
-                <rect x="436" y="256" width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
-                <text x="456" y="271" fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">97%</text>
-              </g>
+              {/* Dynamic room labels and badges from API data (max 4) */}
+              {(analysis?.roomsDetail ?? []).slice(0, 4).map((room, i) => {
+                const col = i % 2;
+                const row = Math.floor(i / 2);
+                const cx = col === 0 ? 200 : 480;
+                const cy = row === 0 ? 164 : 324;
+                const badgeY = row === 0 ? 96 : 256;
+                const labelWidth = Math.max(72, room.name.length * 8);
+                const confPct = Math.round(room.confidence * 100);
+                return (
+                  <g key={`room-${i}`}>
+                    <text x={cx} y={cy} fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">
+                      {room.name.toUpperCase()}
+                    </text>
+                    <text x={cx} y={cy + 18} fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">
+                      {room.area_m2.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m²
+                    </text>
+                    <rect x={col === 0 ? 74 : 354} y={badgeY} width={labelWidth} height="22" rx="5" fill="#111110"/>
+                    <text x={(col === 0 ? 74 : 354) + 10} y={badgeY + 15} fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">
+                      {room.name}
+                    </text>
+                    <rect x={(col === 0 ? 74 : 354) + labelWidth + 4} y={badgeY} width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
+                    <text x={(col === 0 ? 74 : 354) + labelWidth + 24} y={badgeY + 15} fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">
+                      {confPct}%
+                    </text>
+                  </g>
+                );
+              })}
+              {/* Indicator when more than 4 rooms exist */}
+              {(analysis?.roomsDetail?.length ?? 0) > 4 && (
+                <text x="340" y="410" fontFamily="Space Mono, monospace" fontSize="11" fill="#8a857a" textAnchor="middle">
+                  +{analysis!.roomsDetail!.length - 4} outros ambientes — ver tabela abaixo
+                </text>
+              )}
+              {/* Fallback for old analyses without roomsDetail */}
+              {!analysis?.roomsDetail && (analysis?.rooms ?? 0) > 0 && (
+                <text x="340" y="240" fontFamily="Space Mono, monospace" fontSize="12" fill="#b2ada2" textAnchor="middle">
+                  Detalhes por ambiente não disponíveis nesta análise
+                </text>
+              )}
             </svg>
           </div>
 
@@ -178,7 +191,7 @@ export default function DashboardPage() {
             <span>Escala 1:50 · {analysis ? `Análise ${analysis.code}` : "PDF 2.4MB"}</span>
             <span className="flex items-center gap-[6px]">
               <span className="w-[7px] h-[7px] rounded-full" style={{ background: isSimulated ? "#c0392b" : ACCENT }} />
-              {isSimulated ? "dados simulados" : "modo demo"}
+              {isSimulated ? "erro no processamento" : "análise concluída"}
             </span>
           </div>
         </section>
@@ -193,7 +206,7 @@ export default function DashboardPage() {
                 {loading
                   ? "Carregando..."
                   : analysis
-                    ? `Processado em ${analysis.durationSeconds ?? "—"}s · Confiança ${analysis.confidence ?? "—"}%`
+                    ? `Processado em ${analysis.durationSeconds ?? "–"}s · Confiança ${analysis.confidence ?? "–"}%`
                     : "Sem análises ainda"}
               </p>
             </div>
@@ -217,7 +230,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="border border-[#ececea] rounded-[14px] p-[14px] bg-white">
               <div className="font-mono text-[11px] text-[#9a9a95] mb-[6px]">AMBIENTES</div>
-              <div className="text-2xl font-bold">{analysis?.rooms ?? "—"}</div>
+              <div className="text-2xl font-bold">{analysis?.rooms ?? "Aguardando análise"}</div>
             </div>
             <div className="border border-[#ececea] rounded-[14px] p-[14px] bg-white">
               <div className="font-mono text-[11px] text-[#9a9a95] mb-[6px]">ÁREA TOTAL</div>
@@ -248,7 +261,7 @@ export default function DashboardPage() {
                 ±8% margem
               </span>
               <span className="font-mono text-[13px] text-[#b8b6ae]">
-                {analysis?.area ? `R$ ${br((analysis.estimatedCost ?? 0) / analysis.area)}/m²` : "—"}
+                {analysis?.area ? `R$ ${br((analysis.estimatedCost ?? 0) / analysis.area)}/m²` : "Aguardando análise"}
               </span>
             </div>
 

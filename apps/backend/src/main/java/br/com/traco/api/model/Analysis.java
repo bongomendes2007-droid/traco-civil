@@ -1,5 +1,6 @@
 package br.com.traco.api.model;
 
+import br.com.traco.api.dto.RoomDetail;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,8 +13,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "analyses")
@@ -52,6 +56,15 @@ public class Analysis {
     private Double area;
     private Integer rooms;
     private Double estimatedCost;
+
+    /**
+     * Dados estruturados por cômodo retornados pelo worker de IA:
+     * [{name, area_m2, confidence}, ...].
+     * Nulo em análises antigas (pré-migration) ou quando o worker não retorna detalhes.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<RoomDetail> roomsDetail;
 
     @Lob
     @Column(columnDefinition = "TEXT")
@@ -94,6 +107,8 @@ public class Analysis {
     public void setRooms(Integer rooms) { this.rooms = rooms; }
     public Double getEstimatedCost() { return estimatedCost; }
     public void setEstimatedCost(Double estimatedCost) { this.estimatedCost = estimatedCost; }
+    public List<RoomDetail> getRoomsDetail() { return roomsDetail; }
+    public void setRoomsDetail(List<RoomDetail> roomsDetail) { this.roomsDetail = roomsDetail; }
     public String getElementsJson() { return elementsJson; }
     public void setElementsJson(String elementsJson) { this.elementsJson = elementsJson; }
     public String getQuantitiesJson() { return quantitiesJson; }

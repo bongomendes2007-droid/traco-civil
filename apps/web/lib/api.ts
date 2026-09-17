@@ -30,6 +30,12 @@ export type PlantaDto = {
   analysisMode: string | null; // "ia" | "simulado"
 };
 
+export type RoomDetailDto = {
+  name: string;
+  area_m2: number;
+  confidence: number;
+};
+
 export type AnalysisDto = {
   id: number;
   code: string;
@@ -46,6 +52,7 @@ export type AnalysisDto = {
   elements: { label: string; value: string }[];
   quantities: { label: string; value: string }[];
   boxes: Record<string, unknown>[];
+  roomsDetail: RoomDetailDto[] | null;
 };
 
 export type ProjectDto = {

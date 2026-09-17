@@ -72,7 +72,8 @@ public final class Dtos {
                               String analysisMode,
                               Double area, Integer rooms, Double estimatedCost,
                               List<Map<String, String>> elements, List<Map<String, String>> quantities,
-                              List<Map<String, Object>> boxes) {
+                              List<Map<String, Object>> boxes,
+                              List<RoomDetail> roomsDetail) {
         public static AnalysisDto from(br.com.traco.api.model.Analysis a,
                                        List<Map<String, String>> elements,
                                        List<Map<String, String>> quantities,
@@ -92,7 +93,8 @@ public final class Dtos {
                     a.getEstimatedCost(),
                     elements,
                     quantities,
-                    boxes);
+                    boxes,
+                    a.getRoomsDetail());
         }
     }
 }
