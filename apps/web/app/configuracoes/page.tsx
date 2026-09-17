@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api";
+import { useCurrentUser, deriveInitials } from "@/lib/hooks/useCurrentUser";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,12 +57,26 @@ export default function ConfiguracoesPage() {
     router.refresh();
   }
 
+  const { user, loading: userLoading } = useCurrentUser();
+
   const [profile, setProfile] = useState({
-    name: "Marina Prado",
-    email: "marina@traco.com.br",
-    role: "engenheiro",
-    crea: "CREA-SP 5061234567",
+    name: "",
+    email: "",
+    role: "",
+    crea: "",
   });
+
+  // Popula o formulário com dados reais do usuário autenticado
+  useEffect(() => {
+    if (user) {
+      setProfile((prev) => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+        role: user.role ?? "",
+      }));
+    }
+  }, [user]);
 
   const [prefs, setPrefs] = useState({
     margin: "8",
@@ -146,7 +161,7 @@ export default function ConfiguracoesPage() {
                   <CardContent className="space-y-5">
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-full bg-traco-laranja/20 border border-traco-laranja/30 flex items-center justify-center text-xl font-bold text-traco-laranja font-mono">
-                        MP
+                        {userLoading ? "…" : deriveInitials(profile.name)}
                       </div>
                       <div>
                         <Button variant="outline" size="sm" className="text-xs mr-2">

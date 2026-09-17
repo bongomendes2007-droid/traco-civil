@@ -510,7 +510,7 @@ export default function ProjetosPage() {
                         </svg>
                         Última análise
                       </span>
-                      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "#c9c6bd" }}>—</span>
+                      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "#c9c6bd" }}>Nenhuma análise ainda</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#8a8a85" }}>
@@ -520,7 +520,7 @@ export default function ProjetosPage() {
                         </svg>
                         Orçamento est.
                       </span>
-                      <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: "#c9c6bd" }}>—</span>
+                      <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: "#c9c6bd" }}>Ainda não calculado</span>
                     </div>
                   </div>
 

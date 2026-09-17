@@ -27,7 +27,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 function br(value: number | null | undefined, fractionDigits = 2): string {
-  if (value == null) return "—";
+  if (value == null) return "–";
   return value.toLocaleString("pt-BR", {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
@@ -35,7 +35,7 @@ function br(value: number | null | undefined, fractionDigits = 2): string {
 }
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "Data indisponível";
   try {
     return new Date(iso).toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -233,18 +233,18 @@ export default function AnalisesPage() {
           <StatCard label="ANÁLISES TOTAIS" value={stats.total} suffix="execuções" />
           <StatCard
             label="CONFIANÇA MÉDIA"
-            value={stats.avgConf != null ? br(stats.avgConf, 1) : "—"}
+            value={stats.avgConf != null ? br(stats.avgConf, 1) : "–"}
             suffix="%"
             dark
           />
           <StatCard
             label="TEMPO MÉDIO"
-            value={stats.avgTime != null ? stats.avgTime : "—"}
+            value={stats.avgTime != null ? stats.avgTime : "–"}
             suffix="segundos"
           />
           <StatCard
             label="ÁREA ANALISADA"
-            value={stats.totalArea != null ? br(stats.totalArea, 1) : "—"}
+            value={stats.totalArea != null ? br(stats.totalArea, 1) : "–"}
             suffix="m²"
           />
         </div>
@@ -348,14 +348,14 @@ export default function AnalisesPage() {
                           className="font-mono text-[13px] font-bold"
                           style={{ color: ACCENT, width: 76 }}
                         >
-                          {a.code || "—"}
+                          {a.code || "–"}
                         </span>
                         <div style={{ width: 180 }} className="min-w-0">
                           <div className="text-[15px] font-bold truncate">
-                            {a.project || "—"}
+                            {a.project || "Sem projeto"}
                           </div>
                           <div className="font-mono text-[12px] text-[#9a9a95] truncate">
-                            {a.plan || "—"}
+                            {a.plan || "Sem planta"}
                           </div>
                         </div>
                         <span
@@ -367,7 +367,7 @@ export default function AnalisesPage() {
                           className="font-mono text-[12px] text-[#8a8a85] hidden sm:block"
                           style={{ width: 34 }}
                         >
-                          {a.durationSeconds != null ? `${a.durationSeconds}s` : "—"}
+                          {a.durationSeconds != null ? `${a.durationSeconds}s` : "Indisponível"}
                         </span>
                         <div className="hidden lg:block">
                           <ConfBar pct={a.confidence} />
@@ -380,7 +380,7 @@ export default function AnalisesPage() {
                             textAlign: "right",
                           }}
                         >
-                          {a.estimatedCost != null ? `R$ ${br(a.estimatedCost)}` : "—"}
+                          {a.estimatedCost != null ? `R$ ${br(a.estimatedCost)}` : "Ainda não calculado"}
                         </span>
                         <span
                           className="font-mono text-[10px] font-bold px-[9px] py-[5px] rounded-[6px] text-center leading-[1.2] whitespace-nowrap"
@@ -392,10 +392,10 @@ export default function AnalisesPage() {
                           <span
                             className="font-mono text-[10px] font-bold px-[9px] py-[5px] rounded-[6px] whitespace-nowrap inline-flex items-center gap-1"
                             style={{ background: "#c0392b", color: "#fff" }}
-                            title="Worker de IA indisponível — dados simulados"
+                            title="Não foi possível processar esta análise agora. Tente novamente em alguns instantes ou entre em contato com o suporte."
                           >
                             <AlertOctagon size={11} strokeWidth={2.4} />
-                            SIMULADO
+                            ERRO NO PROCESSAMENTO
                           </span>
                         )}
                       </button>
@@ -433,11 +433,11 @@ export default function AnalisesPage() {
                             <div className="font-mono text-[11px] tracking-[.06em] text-[#9a9a95] mb-[14px]">
                               RESUMO
                             </div>
-                            <Row k="Área" v={a.area != null ? `${br(a.area, 1)} m²` : "—"} />
-                            <Row k="Ambientes" v={a.rooms != null ? String(a.rooms) : "—"} />
+                            <Row k="Área" v={a.area != null ? `${br(a.area, 1)} m²` : "Aguardando análise"} />
+                            <Row k="Ambientes" v={a.rooms != null ? String(a.rooms) : "Aguardando análise"} />
                             <Row
                               k="Orçamento est."
-                              v={a.estimatedCost != null ? `R$ ${br(a.estimatedCost)}` : "—"}
+                              v={a.estimatedCost != null ? `R$ ${br(a.estimatedCost)}` : "Ainda não calculado"}
                               accent
                             />
                             <div className="flex justify-between items-center py-[7px]">
@@ -451,8 +451,7 @@ export default function AnalisesPage() {
                             </div>
                             {isSimulated && (
                               <div className="mt-3 p-3 rounded-lg bg-[#fdecea] border border-[#f5c6cb] text-[12px] text-[#92231a] leading-[1.5]">
-                                <strong>MODO SIMULADO.</strong> Os números acima foram gerados
-                                pelo simulador e NÃO refletem a planta enviada.
+                                Não foi possível processar esta análise agora. Tente novamente em alguns instantes ou entre em contato com o suporte.
                               </div>
                             )}
                             <div className="flex gap-[10px] mt-4">
@@ -706,16 +705,16 @@ function LastReportCard({ analysis }: { analysis: AnalysisDto | null }) {
               className="font-mono text-[12px] font-bold mb-[6px]"
               style={{ color: ACCENT }}
             >
-              {analysis.code || "—"}
+              {analysis.code || "–"}
             </div>
             <div className="text-[16px] font-bold">
-              {analysis.project || "—"}
+              {analysis.project || "Sem projeto"}
             </div>
             <div className="font-mono text-[12px] text-[#9a9a95] mt-1">
-              {analysis.area != null ? `${br(analysis.area, 1)} m²` : "—"} ·{" "}
+              {analysis.area != null ? `${br(analysis.area, 1)} m²` : "Aguardando análise"} ·{" "}
               {analysis.estimatedCost != null
                 ? `R$ ${br(analysis.estimatedCost)}`
-                : "—"}{" "}
+                : "Ainda não calculado"}{" "}
               ±8%
             </div>
           </div>

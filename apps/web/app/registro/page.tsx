@@ -146,7 +146,7 @@ function RegisterForm() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Marina Santos"
+                placeholder="Seu nome completo"
                 maxLength={120}
                 className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
               />
@@ -160,7 +160,7 @@ function RegisterForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="marina@escritorio.com.br"
+                placeholder="seu@email.com.br"
                 maxLength={190}
                 className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
               />

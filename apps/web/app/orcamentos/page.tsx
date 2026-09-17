@@ -125,10 +125,10 @@ export default function OrcamentosPage() {
                 <span
                   className="font-mono text-[10px] font-bold px-[9px] py-[5px] rounded-[6px] inline-flex items-center gap-1"
                   style={{ background: "#c0392b", color: "#fff" }}
-                  title="Worker de IA indisponível — valores simulados"
+                  title="Não foi possível processar esta análise agora. Tente novamente em alguns instantes ou entre em contato com o suporte."
                 >
                   <AlertOctagon size={11} strokeWidth={2.4} />
-                  SIMULADO
+                  ERRO NO PROCESSAMENTO
                 </span>
               )}
             </div>
@@ -141,15 +141,15 @@ export default function OrcamentosPage() {
                   className="inline-flex items-center gap-2 font-mono text-[13px] text-[#5c5c58] hover:text-[#111110] transition-colors"
                 >
                   <span className="font-bold" style={{ color: ACCENT }}>
-                    {analysis?.code || "—"}
+                    {analysis?.code || "–"}
                   </span>
                   <span>·</span>
-                  <span>{analysis?.project || "—"}</span>
+                  <span>{analysis?.project || "Sem projeto"}</span>
                   <span>·</span>
-                  <span>{analysis?.plan || "—"}</span>
+                  <span>{analysis?.plan || "Sem planta"}</span>
                   <span>·</span>
                   <span>
-                    {area != null ? `${br(area, 1)} m²` : "—"}
+                    {area != null ? `${br(area, 1)} m²` : "Aguardando análise"}
                   </span>
                   <ChevronDown
                     size={14}
@@ -180,18 +180,18 @@ export default function OrcamentosPage() {
                               className="font-mono text-[12px] font-bold"
                               style={{ color: ACCENT }}
                             >
-                              {a.code || "—"}
+                              {a.code || "–"}
                             </span>
                             <span className="text-[14px] font-semibold truncate">
-                              {a.project || "—"}
+                              {a.project || "Sem projeto"}
                             </span>
                           </div>
                           <div className="font-mono text-[11px] text-[#9a9a95] truncate">
-                            {a.plan || "—"} ·{" "}
-                            {a.area != null ? `${br(a.area, 1)} m²` : "—"} ·{" "}
+                            {a.plan || "Sem planta"} ·{" "}
+                            {a.area != null ? `${br(a.area, 1)} m²` : "Aguardando análise"} ·{" "}
                             {a.estimatedCost != null
                               ? `R$ ${br(a.estimatedCost)}`
-                              : "—"}
+                              : "Ainda não calculado"}
                           </div>
                         </div>
                         {a.analysisMode === "simulado" && (
@@ -210,10 +210,10 @@ export default function OrcamentosPage() {
             ) : (
               <p className="font-mono text-[13px] text-[#9a9a95] m-0">
                 {analysis
-                  ? `${analysis.project || "—"} · ${analysis.plan || "—"} · ${
-                      area != null ? `${br(area, 1)} m²` : "—"
+                  ? `${analysis.project || "Sem projeto"} · ${analysis.plan || "Sem planta"} · ${
+                      area != null ? `${br(area, 1)} m²` : "Aguardando análise"
                     } · Gerado em ${formatDate(analysis.date)}`
-                  : "—"}
+                  : "Nenhuma análise selecionada"}
               </p>
             )}
           </div>
@@ -262,7 +262,7 @@ export default function OrcamentosPage() {
               className="px-[5px] font-semibold"
               style={{ background: ACCENT, color: "#111110" }}
             >
-              estimativa preliminar
+              orçamento paramétrico
             </span>{" "}
             baseada em composição SINAPI e leitura automática da planta. Margem de
             ±{MARGIN}% aplicada. <strong>Não substitui</strong> orçamento
@@ -340,7 +340,7 @@ export default function OrcamentosPage() {
                   className="text-[26px] font-bold"
                   style={{ color: ACCENT }}
                 >
-                  {cost != null ? `R$ ${br(cost)}` : "—"}
+                  {cost != null ? `R$ ${br(cost)}` : "Ainda não calculado"}
                 </div>
               </div>
               <SummaryCard
@@ -348,15 +348,15 @@ export default function OrcamentosPage() {
                 icon={<TrendingUp size={15} strokeWidth={2} />}
                 value={
                   minCost != null && maxCost != null
-                    ? `${br(minCost)} — ${br(maxCost)}`
-                    : "—"
+                    ? `${br(minCost)} – ${br(maxCost)}`
+                    : "Aguardando análise"
                 }
                 small
               />
               <SummaryCard
                 label="CUSTO POR M²"
                 icon={<Layers size={15} strokeWidth={2} />}
-                value={costPerM2 != null ? `R$ ${br(costPerM2)}` : "—"}
+                value={costPerM2 != null ? `R$ ${br(costPerM2)}` : "Aguardando análise"}
                 suffix={costPerM2 != null ? "/m²" : undefined}
               />
               <SummaryCard
@@ -449,7 +449,7 @@ export default function OrcamentosPage() {
                     className="text-[22px] font-bold"
                     style={{ color: ACCENT }}
                   >
-                    {cost != null ? `R$ ${br(cost)}` : "—"}
+                    {cost != null ? `R$ ${br(cost)}` : "Ainda não calculado"}
                   </span>
                 </div>
               </div>
@@ -529,7 +529,7 @@ export default function OrcamentosPage() {
                     </span>
                     {isSimulated && (
                       <span className="font-mono text-[11px] font-bold px-[9px] py-1 rounded-[5px] bg-[#c0392b] text-white">
-                        SIMULADO
+                        ERRO NO PROCESSAMENTO
                       </span>
                     )}
                   </div>
@@ -625,7 +625,7 @@ function br(value: number, fractionDigits = 2): string {
 }
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "Data indisponível";
   try {
     return new Date(iso).toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -633,6 +633,6 @@ function formatDate(iso: string | null | undefined): string {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "Data inválida";
   }
 }

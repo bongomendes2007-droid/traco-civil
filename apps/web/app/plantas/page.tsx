@@ -279,13 +279,13 @@ function PlantCard({ plant }: { plant: Plant }) {
         <div className="flex items-center justify-between py-3">
           <span className="text-[13px] text-[#8a8a85]">Área</span>
           <span className="font-mono text-sm font-bold" style={{ color: areaColor }}>
-            {plant.area || "—"}
+            {plant.area != null ? plant.area : "Aguardando análise"}
           </span>
         </div>
         <div className="flex items-center justify-between pb-[14px]">
           <span className="text-[13px] text-[#8a8a85]">Ambientes</span>
           <span className="font-mono text-sm font-bold" style={{ color: areaColor }}>
-            {plant.rooms || "—"}
+            {plant.rooms != null ? plant.rooms : "Aguardando análise"}
           </span>
         </div>
 

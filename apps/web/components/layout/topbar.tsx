@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/api";
+import { useCurrentUser, deriveInitials } from "@/lib/hooks/useCurrentUser";
 import { Bell, Search, HelpCircle, LogOut, User, Settings } from "lucide-react";
 import Link from "next/link";
 
@@ -16,6 +17,7 @@ export function Topbar({ breadcrumbs, className }: TopbarProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { user, loading: userLoading } = useCurrentUser();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -82,11 +84,20 @@ export function Topbar({ breadcrumbs, className }: TopbarProps) {
             className="flex items-center gap-[11px] focus:outline-none"
           >
             <div className="text-right hidden sm:block leading-[1.25]">
-              <p className="text-sm font-semibold text-[#111110]">Marina Prado</p>
-              <p className="text-[11px] text-[#ff5a1f] font-mono">Pro Plan</p>
+              {userLoading ? (
+                <>
+                  <div className="h-4 w-24 bg-[#ececea] rounded animate-pulse mb-1" />
+                  <div className="h-3 w-16 bg-[#ececea] rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-[#111110]">{user?.name ?? "Usuário"}</p>
+                  <p className="text-[11px] text-[#ff5a1f] font-mono">Plano Gratuito</p>
+                </>
+              )}
             </div>
             <div className="w-9 h-9 rounded-full bg-[#111110] text-[#ff5a1f] flex items-center justify-center text-[13px] font-bold">
-              MP
+              {userLoading ? "…" : deriveInitials(user?.name ?? "")}
             </div>
           </button>
 

@@ -77,12 +77,6 @@ function LoginForm() {
     }
   }
 
-  function fillDemo() {
-    setEmail("demo@tracocivil.com.br");
-    setPassword("demo123");
-    setError(null);
-  }
-
   return (
     <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-white text-[#111110]" style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>
       {/* LEFT: brand / value */}
@@ -155,7 +149,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="marina@escritorio.com.br"
+                placeholder="seu@email.com.br"
                 className="bg-transparent border-none outline-none text-[15px] text-[#111110] placeholder:text-[#9a9a95] w-full"
               />
             </div>
@@ -193,14 +187,6 @@ function LoginForm() {
               </label>
               <span className="text-sm font-semibold cursor-not-allowed opacity-50" title="Em breve">Esqueci a senha</span>
             </div>
-
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="w-full bg-[#faf9f6] border border-[#ececea] rounded-[10px] px-[14px] py-[11px] mb-5 font-mono text-xs text-[#8a8a85] text-center hover:bg-[#f4f4f1] transition-colors"
-            >
-              Demo: demo@tracocivil.com.br · senha demo123
-            </button>
 
             <button
               type="submit"

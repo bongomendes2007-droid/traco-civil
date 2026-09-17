@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useCurrentUser, deriveInitials } from "@/lib/hooks/useCurrentUser";
 import {
   LayoutGrid,
   FolderOpen,
@@ -25,6 +26,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, loading: userLoading } = useCurrentUser();
 
   return (
     <aside className="w-[250px] border-r border-[#ececea] flex flex-col bg-white h-screen sticky top-0 px-[18px] py-[22px]">
@@ -78,11 +80,20 @@ export function Sidebar() {
 
         <div className="flex items-center gap-[11px] p-3 border-t border-[#ececea]">
           <div className="w-9 h-9 rounded-full bg-[#111110] text-[#ff5a1f] flex items-center justify-center font-bold text-[13px] flex-none">
-            MP
+            {userLoading ? "…" : deriveInitials(user?.name ?? "")}
           </div>
           <div className="leading-[1.25] overflow-hidden">
-            <div className="text-sm font-semibold whitespace-nowrap">Marina Prado</div>
-            <div className="font-mono text-[11px] text-[#9a9a95]">Eng. Orçamentos</div>
+            {userLoading ? (
+              <>
+                <div className="h-4 w-24 bg-[#ececea] rounded animate-pulse mb-1" />
+                <div className="h-3 w-16 bg-[#ececea] rounded animate-pulse" />
+              </>
+            ) : (
+              <>
+                <div className="text-sm font-semibold whitespace-nowrap">{user?.name ?? "Usuário"}</div>
+                <div className="font-mono text-[11px] text-[#9a9a95]">{user?.role ?? "Usuário"}</div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -152,30 +152,6 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#111110]" style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>
-      {/* NAV */}
-      <nav className="flex items-center justify-between px-10 py-[22px] border-b border-[#ececea]">
-        <Link href="/">
-          <Image src="/assets/traco-civil-logo.png" alt="TRAÇO CIVIL" width={168} height={28} className="h-[28px] w-auto block" />
-        </Link>
-        <div className="flex items-center gap-[30px] text-[15px] font-medium">
-          <span className="flex items-center gap-[7px] font-mono text-[12px] text-[#9a9a95]">
-            <span
-              className="w-[7px] h-[7px] rounded-full"
-              style={{
-                background: apiStatus === "online" ? "#22c55e" : apiStatus === "offline" ? "#ef4444" : ACCENT,
-                animation: apiStatus === "checking" ? "pulse 2s infinite" : "none"
-              }}
-            />
-            {apiStatus === "checking" ? "Verificando API..." : apiStatus === "online" ? "API Online" : "API Offline"}
-          </span>
-          <Link href="/dashboard" className="hover:text-[#ff5a1f] transition-colors">Dashboard</Link>
-          <Link href="/projetos" className="hover:text-[#ff5a1f] transition-colors">Projetos</Link>
-          <Link href="/configuracoes" className="border-[1.5px] border-[#111110] px-5 py-[9px] rounded-full font-semibold hover:bg-[#111110] hover:text-white transition-colors">
-            Minha Conta
-          </Link>
-        </div>
-      </nav>
-
       {/* MAIN CONTENT */}
       <div className="flex-1 max-w-[1120px] w-full mx-auto px-10 py-14">
 
