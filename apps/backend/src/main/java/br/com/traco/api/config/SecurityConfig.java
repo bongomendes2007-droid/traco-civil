@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,7 +41,7 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/logout", "/",
-                        "/h2-console/**", "/error")
+                        "/h2-console/**", "/error", "/actuator/health")
                 .permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(e -> e
@@ -54,9 +55,15 @@ public class SecurityConfig {
                     res.setContentType("application/json;charset=UTF-8");
                     res.getWriter().write("{\"detail\":\"Acesso negado.\"}");
                 }))
-            .headers(headers -> headers
-                .frameOptions(frame -> frame.sameOrigin())
-                .permissionsPolicy(p -> p.policy("camera=(), geolocation=(), microphone=()")))
+            .headers(headers -> {
+                headers.frameOptions(frame -> frame.sameOrigin());
+                headers.permissionsPolicy(p -> p.policy("camera=(), geolocation=(), microphone=()"));
+                headers.httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000));
+                headers.referrerPolicy(rp -> rp
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+            })
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

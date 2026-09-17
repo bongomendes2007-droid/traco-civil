@@ -16,6 +16,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Rate limiting simples por IP (janela deslizante de 1 minuto)
  * aplicado apenas aos endpoints sensíveis: login, register e upload legado.
+ *
+ * Nota: proteção contra brute-force por conta (e-mail) já existe no
+ * LoginAttemptService (lockout após 5 falhas em 5 min, HTTP 423).
+ * Este filtro complementa com limite por origem (IP), independente da conta alvo.
+ *
  * Em produção com balanceador, complementar com rate limit de edge (Cloudflare/Render).
  */
 @Component
@@ -50,7 +55,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (bucket.size() >= MAX_PER_MINUTE) {
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"detail\":\"Muitas tentativas em sequência. Aguarde 1 minuto.\"}");
+            response.getWriter().write("{\"detail\":\"Muitas tentativas a partir deste IP. Aguarde 1 minuto.\"}");
             return;
         }
         bucket.add(now);

@@ -11,6 +11,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +30,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final CurrentUser currentUser;
+    private final String cookieSameSite;
 
-    public AuthController(AuthService authService, CurrentUser currentUser) {
+    public AuthController(AuthService authService,
+                          CurrentUser currentUser,
+                          @Value("${app.cookie.samesite:Strict}") String cookieSameSite) {
         this.authService = authService;
         this.currentUser = currentUser;
+        this.cookieSameSite = cookieSameSite;
     }
 
     @PostMapping("/register")
@@ -95,7 +100,7 @@ public class AuthController {
                 .secure(false) // Ajustar para true em produção com HTTPS
                 .path("/")
                 .maxAge(24 * 60 * 60) // 24 horas
-                .sameSite("Strict")
+                .sameSite(cookieSameSite)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
@@ -106,7 +111,7 @@ public class AuthController {
                 .secure(false)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite(cookieSameSite)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }

@@ -1,7 +1,10 @@
 # TRAÇO CIVIL — Gerenciamento de Migrations e Rollback
 
-**Última atualização:** 2026-08-29  
+**Última atualização:** 2026-09-05  
 **Aplicável a:** ambiente de produção (Supabase PostgreSQL)
+
+### Nota: Migration V20260904 (rooms_detail) — Registro Ausente no flyway_schema_history
+A migration `V20260904__add_rooms_detail_jsonb.sql` foi aplicada manualmente via script Python (`packages/ai/apply_migration_rooms_detail.py`) usando o Pooler do Supabase. A coluna `rooms_detail JSONB` foi criada e confirmada na tabela `analyses`. Porém, o registro no `flyway_schema_history` **não foi inserido** porque o role do Pooler (`postgres.khpmbksseiwmaurxtxwk`) não tem permissão de escrita nessa tabela. Isso não afeta o funcionamento da aplicação, mas quem for aplicar migrations futuras deve estar ciente de que esse registro específico está faltando no histórico.
 
 ---
 
