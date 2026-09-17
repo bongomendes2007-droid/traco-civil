@@ -5,6 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -13,18 +16,15 @@ import java.sql.Statement;
 /**
  * Wrapper de DataSource que aplica SET LOCAL para RLS em TODA conexão obtida.
  *
- * Isso garante que transações REQUIRES_NEW (ex: AuditService) também recebam
- * o contexto RLS, já que elas obtêm uma nova Connection do pool — e SET LOCAL
- * é por transação/conexão, não por thread.
+ * Usa um ConnectionProxy lazy: o SET LOCAL é aplicado na primeira operação
+ * real (createStatement, prepareStatement, etc.), não na obtenção da conexão.
+ * Isso garante que o autoCommit já esteja desligado pelo Spring TransactionManager
+ * antes do SET LOCAL ser executado — resolvendo o problema onde o HikariCP
+ * entrega a conexão com autoCommit=true e o Spring só o desliga depois.
  *
- * IMPORTANTE: SET LOCAL só funciona dentro de uma transação (autoCommit = false).
- * Se a conexão estiver em autoCommit = true (ex: Hibernate lendo metadados no
- * startup), pulamos o SET LOCAL para não quebrar a conexão.
- *
- * Quando NÃO há contexto RLS (endpoint público como /register, /login),
- * aplicamos RESET para limpar qualquer valor residual de sessão anterior
- * reutilizada do pool. Com RESET, current_setting(..., true) retorna NULL,
- * e as policies com WITH CHECK (true) permitem INSERT normalmente.
+ * Para transações REQUIRES_NEW (ex: AuditService), cada nova conexão obtida
+ * recebe seu próprio proxy, e o ThreadLocal RlsContext ainda está válido
+ * na mesma thread, garantindo que o SET LOCAL seja aplicado na nova transação.
  */
 public class RlsDataSourceWrapper implements DataSource {
 
@@ -38,71 +38,105 @@ public class RlsDataSourceWrapper implements DataSource {
     @Override
     public Connection getConnection() throws SQLException {
         Connection conn = delegate.getConnection();
-        applyRlsContext(conn);
-        return conn;
+        return wrapConnection(conn);
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
         Connection conn = delegate.getConnection(username, password);
-        applyRlsContext(conn);
-        return conn;
+        return wrapConnection(conn);
     }
 
-    private void applyRlsContext(Connection conn) {
-        try {
-            // SET LOCAL é obrigatório por segurança: a variável só vive dentro da
-            // transação atual e é automaticamente descartada no COMMIT/ROLLBACK.
-            // Isso impede vazamento de contexto RLS entre tenants quando a conexão
-            // é reciclada pelo HikariCP ou pelo Transaction Pooler do Supabase.
-            //
-            // Pré-requisito: autoCommit deve estar false (transação ativa).
-            // Se autoCommit=true, SET LOCAL seria descartado imediatamente.
-            // O wrapper verifica isso e loga um aviso se ocorrer.
-            if (conn.getAutoCommit()) {
-                log.warn("RLS context skipped: connection is in autoCommit=true mode. "
-                        + "Queries subject to RLS must run inside @Transactional.");
-                return;
+    private Connection wrapConnection(Connection conn) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                new RlsConnectionHandler(conn));
+    }
+
+    /**
+     * Handler que intercepta a primeira operação real na conexão para aplicar
+     * o SET LOCAL após o autoCommit ter sido desligado pelo Spring.
+     */
+    private static class RlsConnectionHandler implements InvocationHandler {
+        private final Connection delegate;
+        private boolean rlsApplied = false;
+
+        RlsConnectionHandler(Connection delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            String name = method.getName();
+
+            // Aplicar RLS lazy antes da primeira operação que executa SQL
+            if (!rlsApplied && isQueryMethod(name)) {
+                applyRlsContext(delegate);
+                rlsApplied = true;
             }
 
-            RlsContext.RlsInfo info = RlsContext.get();
+            try {
+                return method.invoke(delegate, args);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                throw e.getCause() != null ? e.getCause() : e;
+            }
+        }
 
-            try (Statement stmt = conn.createStatement()) {
-                if (info == null) {
-                    // Sem contexto RLS = endpoint público ou startup.
-                    // RESET limpa qualquer valor residual de conexão reutilizada.
-                    stmt.execute("RESET app.current_user_id");
-                    stmt.execute("RESET app.current_user_role");
-                    stmt.execute("RESET app.current_user_email");
-                    log.debug("RLS context: RESET all (no context)");
-                } else {
-                    if (info.userId() != null) {
-                        stmt.execute("SET LOCAL app.current_user_id = " + info.userId());
-                    } else {
+        private boolean isQueryMethod(String name) {
+            return switch (name) {
+                case "createStatement", "prepareStatement", "prepareCall",
+                     "nativeSQL" -> true;
+                default -> false;
+            };
+        }
+
+        private void applyRlsContext(Connection conn) {
+            try {
+                if (conn.getAutoCommit()) {
+                    log.warn("RLS context skipped (lazy): connection still in autoCommit=true at query time.");
+                    return;
+                }
+
+                RlsContext.RlsInfo info = RlsContext.get();
+
+                try (Statement stmt = conn.createStatement()) {
+                    if (info == null) {
                         stmt.execute("RESET app.current_user_id");
-                    }
-                    if (info.role() != null) {
-                        stmt.execute("SET LOCAL app.current_user_role = '" + escapeSql(info.role()) + "'");
-                    } else {
                         stmt.execute("RESET app.current_user_role");
-                    }
-                    if (info.email() != null) {
-                        stmt.execute("SET LOCAL app.current_user_email = '" + escapeSql(info.email()) + "'");
-                        log.info("RLS context applied: userId={}, role={}, email={}", info.userId(), info.role(), info.email());
-                    } else {
                         stmt.execute("RESET app.current_user_email");
-                        log.debug("RLS context applied: userId={}, role={}, email=NULL", info.userId(), info.role());
+                        log.debug("RLS context (lazy): RESET all (no context)");
+                    } else {
+                        if (info.userId() != null) {
+                            stmt.execute("SET LOCAL app.current_user_id = " + info.userId());
+                        } else {
+                            stmt.execute("RESET app.current_user_id");
+                        }
+                        if (info.role() != null) {
+                            stmt.execute("SET LOCAL app.current_user_role = '" + escapeSql(info.role()) + "'");
+                        } else {
+                            stmt.execute("RESET app.current_user_role");
+                        }
+                        if (info.email() != null) {
+                            stmt.execute("SET LOCAL app.current_user_email = '" + escapeSql(info.email()) + "'");
+                            log.info("RLS context applied (lazy): userId={}, role={}, email={}",
+                                    info.userId(), info.role(), info.email());
+                        } else {
+                            stmt.execute("RESET app.current_user_email");
+                            log.debug("RLS context applied (lazy): userId={}, role={}, email=NULL",
+                                    info.userId(), info.role());
+                        }
                     }
                 }
+            } catch (SQLException e) {
+                log.warn("Failed to apply RLS context (lazy): {}", e.getMessage());
             }
-        } catch (SQLException e) {
-            log.debug("Failed to apply RLS context: {}", e.getMessage());
         }
-    }
 
-    private String escapeSql(String value) {
-        if (value == null) return "";
-        return value.replace("'", "''");
+        private String escapeSql(String value) {
+            if (value == null) return "";
+            return value.replace("'", "''");
+        }
     }
 
     // ── Delegação pura dos métodos restantes do DataSource ──────
@@ -134,11 +168,14 @@ public class RlsDataSourceWrapper implements DataSource {
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
+        if (iface.isInstance(delegate)) {
+            return iface.cast(delegate);
+        }
         return delegate.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.isWrapperFor(iface);
+        return iface.isInstance(delegate) || delegate.isWrapperFor(iface);
     }
 }
