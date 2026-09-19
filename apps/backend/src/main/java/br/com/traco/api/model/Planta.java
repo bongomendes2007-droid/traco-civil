@@ -31,6 +31,10 @@ public class Planta {
 
     private String storagePath;
 
+    /** Path do objeto no Supabase Storage (bucket plantas-originais), ex: {user_id}/{planta_id}/{filename}. */
+    @Column(name = "storage_url", length = 500)
+    private String storageUrl;
+
     @Column(nullable = false)
     private String status; // processando | concluida | erro
 
@@ -64,6 +68,9 @@ public class Planta {
 
     public String getStoragePath() { return storagePath; }
     public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
+
+    public String getStorageUrl() { return storageUrl; }
+    public void setStorageUrl(String storageUrl) { this.storageUrl = storageUrl; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
