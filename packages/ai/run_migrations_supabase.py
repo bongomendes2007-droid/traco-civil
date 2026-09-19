@@ -5,8 +5,45 @@ import re
 import sys
 import psycopg2
 
-CONN_STR = "postgresql://postgres:PCtd91zxrhLoFqb3@db.khpmbksseiwmaurxtxwk.supabase.co:5432/postgres"
-MIGRATION_DIR = r"apps\backend\src\main\resources\db\migration"
+MIGRATION_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..",
+    "apps", "backend", "src", "main", "resources", "db", "migration",
+)
+
+
+def _load_dotenv(path: str = ".env"):
+    """Carrega pares CHAVE=VALOR de um .env simples, sem sobrescrever o ambiente."""
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip())
+
+
+def _conn_str() -> str:
+    """Monta a connection string do superuser a partir de variáveis de ambiente.
+
+    A senha NUNCA deve ser commitada — use SUPABASE_POSTGRES_PASSWORD no
+    packages/ai/.env (ou no ambiente do shell).
+    """
+    _load_dotenv()
+    password = os.environ.get("SUPABASE_POSTGRES_PASSWORD")
+    if not password:
+        sys.exit(
+            "ERRO: SUPABASE_POSTGRES_PASSWORD não definida. "
+            "Defina no ambiente ou em packages/ai/.env (ver .env.example)."
+        )
+    host = os.environ.get("SUPABASE_DB_HOST", "db.khpmbksseiwmaurxtxwk.supabase.co")
+    port = os.environ.get("SUPABASE_DB_PORT", "5432")
+    dbname = os.environ.get("SUPABASE_DB_NAME", "postgres")
+    return f"postgresql://postgres:{password}@{host}:{port}/{dbname}"
+
+
+CONN_STR = _conn_str()
 
 def natural_sort_key(s):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
@@ -17,6 +54,16 @@ print(f"Encontradas {len(files)} migrations")
 conn = psycopg2.connect(CONN_STR)
 conn.autocommit = True
 cur = conn.cursor()
+
+if "--check" in sys.argv:
+    # Modo leve: apenas valida a conexão/credencial. NÃO aplica DDL.
+    cur.execute("SELECT 1")
+    cur.execute("SELECT current_user, current_database()")
+    user, db = cur.fetchone()
+    cur.close()
+    conn.close()
+    print(f"CONNECTION_OK user={user} db={db}")
+    sys.exit(0)
 
 for f in files:
     name = os.path.basename(f)
