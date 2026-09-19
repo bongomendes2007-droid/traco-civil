@@ -25,6 +25,21 @@
 
 ---
 
+## 1.1 Registro de Incidentes
+
+### INC-001 — Senha do superuser postgres commitada (18/09/2026)
+
+- **O quê:** a connection string com a senha do superuser `postgres` estava hardcoded em `packages/ai/run_migrations_supabase.py`, commitada em `9da8b67` ("feat(sinapi): orçamento real via base SINAPI") e presente em `origin/main` (repositório público `github.com/bongomendes2007-droid/traco-civil`).
+- **Correção aplicada:** literal removida do script; agora lê `SUPABASE_POSTGRES_PASSWORD` de `packages/ai/.env`/ambiente (ver `.env.example`).
+- **✅ Rotação concluída (18/09/2026):** senha resetada no painel do Supabase (Database > Settings > Reset database password) e `SUPABASE_POSTGRES_PASSWORD` atualizada em `packages/ai/.env`. Conectividade validada com a nova senha (12 tabelas, dados SINAPI intactos). A senha antiga permanece no histórico do git (`9da8b67`, `origin/main`) mas está **invalidada**. O script de validação padrão é `python run_migrations_supabase.py --check` (apenas `SELECT 1`, sem DDL) — NÃO usar `import run_migrations_supabase` como teste, pois isso reaplica migrations contra produção.
+- **Histórico do git:** a senha antiga permanece acessível no histórico do commit `9da8b67` — a rotação neutraliza o risco prático, mas o objeto permanece no remote. Não faremos rewrite de histórico (repo público, custo/risco alto vs. benefício nulo pós-rotação).
+- **Lições (falha do processo — este documento deveria ter prevenido):**
+  1. A auditoria confirmou que `.env` nunca foi commitado, mas **scripts utilitários de DDL/importação ficaram fora do inventário** — a política listava secrets, não *locais de uso*. Todo script que consuma um secret deve estar no inventário da §1.
+  2. **Pre-commit manual obrigatório:** antes de qualquer commit, rodar `git grep -iE "postgres(ql)?://.*(password|:)[^@]*@" -- ':!*.md'` e conferir que nenhum diff adiciona connection string, senha ou token. A checagem de secrets existente nos scripts `_*.py` locais (não trackeados) também deve ser repetida quando algum deles for trackear.
+  3. Scripts de uso pontual com credenciais (`_*.py`) ficam fora do git — padrão correto mantido; o erro foi trackear o script de DDL permanente com a literal embutida.
+
+---
+
 ## 2. Frequência Recomendada de Rotação
 
 | Secret | Frequência | Gatilho Adicional | Justificativa |
