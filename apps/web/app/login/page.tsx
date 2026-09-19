@@ -41,6 +41,9 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = sanitizeRedirect(searchParams.get("redirect"));
+  // Sessão expirada: handleSessionExpired (lib/api.ts) redirecionou até aqui
+  // limpando o cookie via /api/auth/logout. Mensagem única, sem loop.
+  const sessionExpired = searchParams.get("expired") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -133,6 +136,12 @@ function LoginForm() {
           </span>
           <h2 className="text-[34px] font-bold tracking-[-.02em] mb-2">Bem-vindo de volta</h2>
           <p className="text-base text-[#5c5c58] mb-[30px]">Entre para acessar seus projetos e análises.</p>
+
+          {sessionExpired && (
+            <div className="mb-5 p-3 rounded-lg bg-[#fff8e1] border border-[#ffe08a] text-sm text-[#8a6d00] font-medium">
+              Sua sessão expirou por inatividade. Entre novamente para continuar.
+            </div>
+          )}
 
           {error && (
             <div className="mb-5 p-3 rounded-lg bg-[#fff0ea] border border-[#ffd9c2] text-sm text-[#b8360b] font-medium">

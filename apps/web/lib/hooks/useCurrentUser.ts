@@ -43,6 +43,12 @@ export function useCurrentUser(): UseCurrentUserResult {
             setError(response.status === 401 ? "Não autenticado" : "Erro ao carregar perfil");
             setLoading(false);
           }
+          // Sessão expirada: mesmo tratamento centralizado do lib/api.ts
+          // (limpa cookie via logout + redirect único com guard anti-loop).
+          if (response.status === 401 && typeof window !== "undefined") {
+            const { handleSessionExpired } = await import("@/lib/api");
+            handleSessionExpired();
+          }
           return;
         }
 

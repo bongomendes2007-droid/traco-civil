@@ -31,17 +31,20 @@ public class AuthController {
     private final AuthService authService;
     private final CurrentUser currentUser;
     private final String cookieSameSite;
+    private final long jwtExpirationMs;
 
     public AuthController(AuthService authService,
                           CurrentUser currentUser,
-                          @Value("${app.cookie.samesite:Strict}") String cookieSameSite) {
+                          @Value("${app.cookie.samesite:Strict}") String cookieSameSite,
+                          @Value("${app.jwt.expiration-ms}") long jwtExpirationMs) {
         this.authService = authService;
         this.currentUser = currentUser;
         this.cookieSameSite = cookieSameSite;
+        this.jwtExpirationMs = jwtExpirationMs;
     }
 
     @PostMapping("/register")
-    public UserDto register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
+    public UserDto register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
         // Set email in RLS context BEFORE calling the @Transactional service.
         // Spring obtains the DB connection when the transaction starts (at service entry),
         // so the wrapper must see the email in ThreadLocal at that point to allow
@@ -51,7 +54,7 @@ public class AuthController {
         }
         try {
             AuthResponse authResponse = authService.register(request);
-            setAuthCookie(response, authResponse.token());
+            setAuthCookie(httpRequest, response, authResponse.token());
             return authResponse.user();
         } finally {
             RlsContext.clear();
@@ -59,7 +62,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public UserDto login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    public UserDto login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
         // Set email in RLS context BEFORE calling the @Transactional service.
         // Spring obtains the DB connection when the transaction starts (at service entry),
         // so the RlsDataSourceWrapper must see the email in ThreadLocal at that point
@@ -69,7 +72,7 @@ public class AuthController {
         }
         try {
             AuthResponse authResponse = authService.login(request);
-            setAuthCookie(response, authResponse.token());
+            setAuthCookie(httpRequest, response, authResponse.token());
             return authResponse.user();
         } finally {
             RlsContext.clear();
@@ -77,8 +80,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public void logout(HttpServletResponse response) {
-        clearAuthCookie(response);
+    public void logout(HttpServletRequest httpRequest, HttpServletResponse response) {
+        clearAuthCookie(httpRequest, response);
     }
 
     @GetMapping("/me")
@@ -86,29 +89,26 @@ public class AuthController {
         return UserDto.from(currentUser.require());
     }
 
-    private void setAuthCookie(HttpServletResponse response, String token) {
-        // Detecta se estamos em ambiente seguro (HTTPS) para definir Secure=true
-        // Em dev local (HTTP), Secure deve ser false para o cookie ser enviado.
-        // Como não temos acesso direto ao request aqui de forma limpa sem injetar,
-        // vamos usar uma abordagem que funciona em ambos: Secure=false em dev, true em prod.
-        // Para simplificar e garantir funcionamento local agora, usaremos Secure=false
-        // mas em produção real isso deve ser true. O ideal é injetar HttpServletRequest.
-        // Vou ajustar para injetar HttpServletRequest no método para checar isSecure().
+    private void setAuthCookie(HttpServletRequest request, HttpServletResponse response, String token) {
+        // maxAge ALINHADO à expiração real do JWT — o cookie não deve sobreviver
+        // ao token, senão o middleware do Next vê "sessão" após expiração e
+        // rebota /login de volta às páginas protegidas (loop de redirect).
+        long maxAgeSeconds = Math.max(1, jwtExpirationMs / 1000);
 
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, token)
                 .httpOnly(true)
-                .secure(false) // Ajustar para true em produção com HTTPS
+                .secure(request.isSecure()) // true em HTTPS (prod), false em dev HTTP
                 .path("/")
-                .maxAge(24 * 60 * 60) // 24 horas
+                .maxAge(maxAgeSeconds)
                 .sameSite(cookieSameSite)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    private void clearAuthCookie(HttpServletResponse response) {
+    private void clearAuthCookie(HttpServletRequest request, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(request.isSecure())
                 .path("/")
                 .maxAge(0)
                 .sameSite(cookieSameSite)
