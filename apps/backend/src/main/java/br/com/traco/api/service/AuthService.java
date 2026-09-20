@@ -13,11 +13,15 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -92,13 +96,27 @@ public class AuthService {
         if (!email.isEmpty()) {
             RlsContext.setEmail(email);
             String safeEmail = email.replace("'", "''");
+            // app.login_context + email liberam SOMENTE a linha deste e-mail, via
+            // policy users_select_login (V20260919). SET LOCAL morre no fim desta
+            // transação — nenhuma outra query do sistema pode ler users por email.
             entityManager.createNativeQuery("SET LOCAL app.current_user_email = '" + safeEmail + "'")
+                    .executeUpdate();
+            entityManager.createNativeQuery("SET LOCAL app.login_context = 'true'")
                     .executeUpdate();
         }
 
         loginAttempts.checkNotLocked(email);
 
         User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null && !email.isEmpty()) {
+            // Visibilidade de incidente: se a policy/flag falhar (ex.: race do pool
+            // pulando o SET LOCAL), o findByEmail volta vazio com email setado e o
+            // usuário vê um 401 enganoso com senha correta. Este WARN torna a falha
+            // explícita nos logs (Render) em vez de silenciosa.
+            log.warn("findByEmail retornou vazio com contexto de login setado (email={}). " +
+                    "Verifique se a policy users_select_login (V20260919) existe no banco e se o " +
+                    "SET LOCAL foi aplicado na conexão da transação.", email);
+        }
         boolean matches = user != null
                 && passwordEncoder.matches(req.password() == null ? "" : req.password(), user.getPassword());
 
