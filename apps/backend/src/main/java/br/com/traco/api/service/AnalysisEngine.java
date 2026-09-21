@@ -40,6 +40,7 @@ public class AnalysisEngine {
     private final AnalysisRepository analysisRepository;
     private final ObjectMapper objectMapper;
     private final ComputerVisionClient cvClient;
+    private final ReconciliationService reconciliationService;
     private final AuditService auditService;
     private final OrcamentoService orcamentoService;
 
@@ -51,12 +52,14 @@ public class AnalysisEngine {
                           AnalysisRepository analysisRepository,
                           ObjectMapper objectMapper,
                           ComputerVisionClient cvClient,
+                          ReconciliationService reconciliationService,
                           AuditService auditService,
                           OrcamentoService orcamentoService) {
         this.plantaRepository = plantaRepository;
         this.analysisRepository = analysisRepository;
         this.objectMapper = objectMapper;
         this.cvClient = cvClient;
+        this.reconciliationService = reconciliationService;
         this.auditService = auditService;
         this.orcamentoService = orcamentoService;
     }
@@ -132,16 +135,25 @@ public class AnalysisEngine {
         String boxesJson = null;
 
         if (cv != null) {
-            // ---- leitura real (OpenCV) ----
-            area = cv.areaM2();
-            rooms = cv.roomsCount();
-            confidence = (int) Math.round(cv.confidence() * 100);
-            wallLength = cv.wallLengthM();
-            openings = cv.openings();
-            boxesJson = cv.boxesJson();
+            // ---- leitura real (OpenCV) + revisão cruzada Claude Vision ----
+            Long userId = planta.getProject() != null && planta.getProject().getUser() != null
+                    ? planta.getProject().getUser().getId() : null;
+            String userEmail = planta.getProject() != null && planta.getProject().getUser() != null
+                    ? planta.getProject().getUser().getEmail() : null;
+
+            ReconciliationService.ReconciledResult reconciled =
+                    reconciliationService.reconcile(cv, planta.getStoragePath(), planta.getName(),
+                            userId, userEmail, planta.getId());
+
+            area = reconciled.areaM2();
+            rooms = reconciled.roomsCount();
+            confidence = (int) Math.round(reconciled.confidence() * 100);
+            wallLength = reconciled.wallLengthM();
+            openings = reconciled.openings();
+            boxesJson = reconciled.boxesJson();
             duration = Math.max(1, secondsSince(start));
             analysis.setAnalysisMode("ia");
-            analysis.setRoomsDetail(cv.roomsDetail());
+            analysis.setRoomsDetail(reconciled.roomsDetail());
         } else {
             // ---- worker offline: política híbrida ----
             if (isProd()) {

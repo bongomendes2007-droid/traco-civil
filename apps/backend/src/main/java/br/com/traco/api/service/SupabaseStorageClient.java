@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,6 +34,19 @@ import java.util.Optional;
  */
 @Service
 public class SupabaseStorageClient {
+
+    /**
+     * Mapa determinístico de extensão → MIME. Containers Docker frequentemente
+     * não têm /etc/mime.types, fazendo Files.probeContentType retornar null;
+     * este mapa garante o tipo correto para as extensões que aceitamos.
+     */
+    private static final Map<String, String> MIME_BY_EXT = Map.of(
+            "pdf", "application/pdf",
+            "png", "image/png",
+            "jpg", "image/jpeg",
+            "jpeg", "image/jpeg",
+            "dwg", "application/dwg"
+    );
 
     private final String baseUrl;
     private final String serviceKey;
@@ -64,10 +78,11 @@ public class SupabaseStorageClient {
         String objectPath = objectPath(userId, plantaId, filename);
         try {
             byte[] body = Files.readAllBytes(localFile);
+            String contentType = resolveContentType(filename, localFile);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl + "/storage/v1/object/" + bucket + "/" + objectPath))
                     .header("Authorization", "Bearer " + serviceKey)
-                    .header("Content-Type", "application/octet-stream")
+                    .header("Content-Type", contentType)
                     .header("x-upsert", "true")
                     .PUT(HttpRequest.BodyPublishers.ofByteArray(body))
                     .timeout(Duration.ofSeconds(120))
@@ -145,5 +160,31 @@ public class SupabaseStorageClient {
     public String objectPath(long userId, long plantaId, String filename) {
         String safe = URLEncoder.encode(filename.replaceAll("[^a-zA-Z0-9._-]", "_"), StandardCharsets.UTF_8);
         return userId + "/" + plantaId + "/" + safe;
+    }
+
+    /**
+     * Resolve o Content-Type real do arquivo. Prioriza o mapa estático (extensão
+     * já validada pelo PlantaIntakeService) porque containers Docker geralmente
+     * não têm /etc/mime.types e Files.probeContentType retorna null. O fallback
+     * para probe existe apenas como rede de segurança para extensões futuras.
+     */
+    private String resolveContentType(String filename, Path localFile) {
+        String ext = "";
+        if (filename != null && filename.contains(".")) {
+            ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        }
+        String fromMap = MIME_BY_EXT.get(ext);
+        if (fromMap != null) {
+            return fromMap;
+        }
+        try {
+            String probed = Files.probeContentType(localFile);
+            if (probed != null && !probed.isBlank()) {
+                return probed;
+            }
+        } catch (IOException ignored) {
+            // probe falhou — cai no fallback abaixo
+        }
+        return "application/octet-stream";
     }
 }
