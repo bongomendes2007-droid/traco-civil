@@ -154,6 +154,8 @@ public class AnalysisEngine {
             duration = Math.max(1, secondsSince(start));
             analysis.setAnalysisMode("ia");
             analysis.setRoomsDetail(reconciled.roomsDetail());
+            analysis.setRoomsGeometry(reconciled.roomsGeometry());
+            analysis.setScaleInfo(reconciled.scaleInfo());
         } else {
             // ---- worker offline: política híbrida ----
             if (isProd()) {

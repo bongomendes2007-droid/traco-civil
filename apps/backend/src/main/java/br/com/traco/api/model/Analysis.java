@@ -18,6 +18,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "analyses")
@@ -78,6 +79,23 @@ public class Analysis {
     @Column(columnDefinition = "TEXT")
     private String boxesJson; // [{"x":0.5,"y":0.08,"w":0.43,"h":0.40,"area_m2":34.9},...]
 
+    /**
+     * Geometria dos ambientes detectados (Fase 3):
+     * [{id, name, type, area_m2, confidence, source, box:{x,y,w,h}, polygon}]
+     * Box normalizado 0-1. Source: "worker", "claude", "user".
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "rooms_geometry", columnDefinition = "jsonb")
+    private List<Map<String, Object>> roomsGeometry;
+
+    /**
+     * Metadados de escala da planta (Fase 3):
+     * {denominator, source, meters_per_pixel, image_width_px, image_height_px, mode}
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "scale_info", columnDefinition = "jsonb")
+    private Map<String, Object> scaleInfo;
+
     private Instant createdAt;
 
     @PrePersist
@@ -115,6 +133,10 @@ public class Analysis {
     public void setQuantitiesJson(String quantitiesJson) { this.quantitiesJson = quantitiesJson; }
     public String getBoxesJson() { return boxesJson; }
     public void setBoxesJson(String boxesJson) { this.boxesJson = boxesJson; }
+    public List<Map<String, Object>> getRoomsGeometry() { return roomsGeometry; }
+    public void setRoomsGeometry(List<Map<String, Object>> roomsGeometry) { this.roomsGeometry = roomsGeometry; }
+    public Map<String, Object> getScaleInfo() { return scaleInfo; }
+    public void setScaleInfo(Map<String, Object> scaleInfo) { this.scaleInfo = scaleInfo; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
