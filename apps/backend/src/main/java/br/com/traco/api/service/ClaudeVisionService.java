@@ -104,10 +104,23 @@ public class ClaudeVisionService {
                 Sua tarefa é REVISAR a análise feita por um sistema de visão computacional (OpenCV)
                 comparando com a imagem real da planta que você recebe.
 
-                REGRAS:
+                PROCESSO OBRIGATÓRIO (siga nesta ordem antes de responder):
+                1. ENUMERE MENTALMENTE todas as paredes fechadas visíveis na imagem. Conte quantos
+                   recintos delimitados por paredes existem. Isso define o número máximo de ambientes.
+                2. DISTINGA "ambiente fechado" de "zona dentro de espaço aberto":
+                   - Sala + jantar integrados SEM parede divisória = 1 ambiente único (ex: "Sala de Estar/Jantar").
+                   - Hall/corredor só conta como ambiente próprio se for delimitado por paredes em
+                     todos os lados. Passagens abertas entre dois cômodos NÃO são ambientes.
+                   - Áreas de transição sem paredes (ex: hall aberto para sala) NÃO contam.
+                3. Após montar sua lista interna de ambientes, FAÇA UMA SEGUNDA VERIFICAÇÃO:
+                   revise a imagem novamente confirmando cada item da lista. Se encontrar algo que
+                   não está delimitado por paredes, remova. Se faltar um recinto fechado, adicione.
+                   Só então produza a resposta final.
+
+                REGRAS DE SAÍDA:
                 1. Compare cada cômodo detectado pelo worker com o que você vê na imagem.
                 2. Se o worker acertou, confirme. Se errou (cômodo faltando, área incorreta,
-                   tipo errado, parede fantasma), corrija.
+                   tipo errado, parede fantasma, zona aberta contada como ambiente), corrija.
                 3. O valor do Claude SEMPRE prevalece sobre o worker em caso de discordância.
                 4. Responda APENAS com JSON válido, sem markdown, sem texto extra.
                 5. Use nomes de ambiente em português brasileiro.

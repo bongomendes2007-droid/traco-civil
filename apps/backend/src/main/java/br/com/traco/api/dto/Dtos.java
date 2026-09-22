@@ -75,7 +75,8 @@ public final class Dtos {
                               List<Map<String, Object>> boxes,
                               List<RoomDetail> roomsDetail,
                               List<Map<String, Object>> roomsGeometry,
-                              Map<String, Object> scaleInfo) {
+                              Map<String, Object> scaleInfo,
+                              Long plantaId) {
         public static AnalysisDto from(br.com.traco.api.model.Analysis a,
                                        List<Map<String, String>> elements,
                                        List<Map<String, String>> quantities,
@@ -98,7 +99,8 @@ public final class Dtos {
                     boxes,
                     a.getRoomsDetail(),
                     a.getRoomsGeometry(),
-                    a.getScaleInfo());
+                    a.getScaleInfo(),
+                    a.getPlanta() != null ? a.getPlanta().getId() : null);
         }
     }
 }

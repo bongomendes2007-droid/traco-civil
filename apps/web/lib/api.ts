@@ -36,6 +36,26 @@ export type RoomDetailDto = {
   confidence: number;
 };
 
+export type RoomGeometryDto = {
+  id: number;
+  name: string;
+  type?: string | null;
+  area_m2: number;
+  confidence: number;
+  source: "worker" | "claude" | "user";
+  box: { x: number; y: number; w: number; h: number } | null;
+  polygon?: unknown;
+};
+
+export type ScaleInfoDto = {
+  denominator?: number;
+  source?: string;
+  meters_per_pixel?: number | null;
+  image_width_px?: number | null;
+  image_height_px?: number | null;
+  mode?: string;
+};
+
 export type AnalysisDto = {
   id: number;
   code: string;
@@ -53,6 +73,9 @@ export type AnalysisDto = {
   quantities: { label: string; value: string }[];
   boxes: Record<string, unknown>[];
   roomsDetail: RoomDetailDto[] | null;
+  roomsGeometry: RoomGeometryDto[] | null;
+  scaleInfo: ScaleInfoDto | null;
+  plantaId?: number | null;
 };
 
 export type ProjectDto = {
