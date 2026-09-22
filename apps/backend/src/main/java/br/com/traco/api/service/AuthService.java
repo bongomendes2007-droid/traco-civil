@@ -11,6 +11,7 @@ import br.com.traco.api.repo.UserRepository;
 import br.com.traco.api.security.JwtService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
@@ -81,6 +82,13 @@ public class AuthService {
             entityManager.flush();
         } catch (DataIntegrityViolationException e) {
             throw new ApiException("Este e-mail já está cadastrado.", 409);
+        } catch (DataAccessException e) {
+            // Captura falhas de RLS (PSQLException wrapped) e outros erros de
+            // persistência que não são violação de constraint. Sem este catch,
+            // uma policy de SELECT ausente no RETURNING pós-INSERT cairia no
+            // GlobalExceptionHandler.handleGeneric() → 500 genérico.
+            log.error("Falha de persistência no registro (email={}): {}", email, e.getMessage(), e);
+            throw new ApiException("Não foi possível criar a conta. Tente novamente em alguns segundos.", 500);
         }
         return new AuthResponse(jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()), UserDto.from(user));
     }
