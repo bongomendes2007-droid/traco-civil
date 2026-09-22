@@ -36,6 +36,26 @@ export type RoomDetailDto = {
   confidence: number;
 };
 
+export type RoomGeometryDto = {
+  id: number;
+  name: string;
+  type?: string | null;
+  area_m2: number;
+  confidence: number;
+  source: "worker" | "claude" | "user";
+  box: { x: number; y: number; w: number; h: number } | null;
+  polygon?: unknown;
+};
+
+export type ScaleInfoDto = {
+  denominator?: number;
+  source?: string;
+  meters_per_pixel?: number | null;
+  image_width_px?: number | null;
+  image_height_px?: number | null;
+  mode?: string;
+};
+
 export type AnalysisDto = {
   id: number;
   code: string;
@@ -53,6 +73,9 @@ export type AnalysisDto = {
   quantities: { label: string; value: string }[];
   boxes: Record<string, unknown>[];
   roomsDetail: RoomDetailDto[] | null;
+  roomsGeometry: RoomGeometryDto[] | null;
+  scaleInfo: ScaleInfoDto | null;
+  plantaId?: number | null;
 };
 
 export type ProjectDto = {
@@ -74,15 +97,56 @@ class ApiError extends Error {
 }
 
 /**
+ * Tratamento CENTRALIZADO de sessão expirada (401). Único ponto da aplicação
+ * com autoridade para redirecionar por auth — nenhuma página/componente deve
+ * fazer isso por conta própria.
+ *
+ * Fluxo: 401 → POST /api/auth/logout (limpa o cookie httpOnly server-side,
+ * best-effort) → redireciona UMA vez para /login?expired=1&redirect=<path>.
+ * NUNCA usa window.location.reload() (era a causa do loop infinito).
+ *
+ * Guard anti-loop (camada extra de segurança): um redirect só é emitido se
+ * não houve outro há menos de 10s. Se já houve, apenas registra e aguarda o
+ * usuário — evita ping-pong mesmo se a causa raiz reaparecer em outro ponto.
+ */
+let lastAuthRedirectAt = 0;
+
+export function handleSessionExpired(): void {
+  if (typeof window === "undefined") return;
+
+  const now = Date.now();
+  if (now - lastAuthRedirectAt < 10_000) {
+    // Já redirecionamos há poucos segundos — não repetir (proteção anti-loop).
+    return;
+  }
+  lastAuthRedirectAt = now;
+
+  // Limpa TODA a sessão local: o cookie é httpOnly, então só o backend pode
+  // revogá-lo — o endpoint de logout o zera com maxAge=0. Best-effort: mesmo
+  // que falhe, o redirect abaixo tira o usuário da tela protegida.
+  void fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {
+    // logout falhou (backend fora?) — o redirect já resolve a UX
+  });
+
+  const redirect = encodeURIComponent(
+    window.location.pathname + window.location.search
+  );
+  window.location.href = `/login?expired=1&redirect=${redirect}`;
+}
+
+/**
  * Wrapper central de fetch. SEMPRE envia o cookie httpOnly de sessão
  * (credentials: "include") e lê o corpo de erro padronizado do backend
  * ({ "detail": "mensagem" } — ver GlobalExceptionHandler.java).
  *
  * @param redirectOnAuthError Quando true (padrão) e a resposta vier 401,
- *   redireciona para /login — usado nas chamadas de dados protegidos
- *   (sessão expirou ou nunca existiu). Fica false em /api/auth/login e
- *   /api/auth/register, onde um 401 é resposta de negócio esperada
- *   ("senha errada"), não sessão inválida — a página de login trata
+ *   limpa a sessão e redireciona para /login — usado nas chamadas de dados
+ *   protegidos (sessão expirou ou nunca existiu). Fica false em
+ *   /api/auth/login e /api/auth/register, onde um 401 é resposta de negócio
+ *   esperada ("senha errada"), não sessão inválida — a página de login trata
  *   esse erro sozinha e não pode ser redirecionada para si mesma.
  */
 async function request<T>(
@@ -109,8 +173,7 @@ async function request<T>(
     }
 
     if (response.status === 401 && redirectOnAuthError && typeof window !== "undefined") {
-      const redirect = encodeURIComponent(window.location.pathname);
-      window.location.href = `/login?redirect=${redirect}`;
+      handleSessionExpired();
     }
 
     throw new ApiError(detail, response.status);

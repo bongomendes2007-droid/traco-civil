@@ -17,7 +17,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -45,7 +47,9 @@ public class ComputerVisionClient {
                            int openings,
                            double confidence,
                            String boxesJson,
-                           List<RoomDetail> roomsDetail) {}
+                           List<RoomDetail> roomsDetail,
+                           List<Map<String, Object>> roomsGeometry,
+                           Map<String, Object> scaleInfo) {}
 
     public static class CvRejectedException extends RuntimeException {
         public CvRejectedException(String message) {
@@ -110,8 +114,9 @@ public class ComputerVisionClient {
                     throw new CvRejectedException(
                             n.path("reason").asText("A IA não conseguiu ler esta planta."));
                 }
-                // Parse per-room details from worker response
+                // Parse per-room details and geometry from worker response
                 List<RoomDetail> roomsDetail = new ArrayList<>();
+                List<Map<String, Object>> roomsGeometry = new ArrayList<>();
                 JsonNode roomsNode = n.path("rooms");
                 if (roomsNode.isArray()) {
                     for (int i = 0; i < roomsNode.size(); i++) {
@@ -120,8 +125,44 @@ public class ComputerVisionClient {
                         double roomArea = r.path("area_m2").asDouble(0);
                         double roomConf = r.path("confidence").asDouble(n.path("confidence").asDouble(0));
                         roomsDetail.add(new RoomDetail(name, roomArea, roomConf));
+
+                        // Geometria normalizada (box 0-1) — Fase 3
+                        Map<String, Object> geom = new HashMap<>();
+                        geom.put("id", i);
+                        geom.put("name", name);
+                        geom.put("type", r.path("type").asText(null));
+                        geom.put("area_m2", roomArea);
+                        geom.put("confidence", roomConf);
+                        geom.put("source", "worker");
+                        Map<String, Object> box = new HashMap<>();
+                        box.put("x", r.path("x").asDouble(0));
+                        box.put("y", r.path("y").asDouble(0));
+                        box.put("w", r.path("w").asDouble(0));
+                        box.put("h", r.path("h").asDouble(0));
+                        geom.put("box", box);
+                        geom.put("polygon", null);
+                        roomsGeometry.add(geom);
                     }
                 }
+
+                // Scale info — Fase 3
+                Map<String, Object> scaleInfo = new HashMap<>();
+                String scaleStr = n.path("scale").asText("1:50");
+                int denominator = 50;
+                if (scaleStr.contains(":")) {
+                    try {
+                        denominator = Integer.parseInt(scaleStr.substring(scaleStr.indexOf(':') + 1).trim());
+                    } catch (NumberFormatException ignored) {}
+                }
+                scaleInfo.put("denominator", denominator);
+                scaleInfo.put("source", "worker");
+                scaleInfo.put("mode", n.path("mode").asText("raster"));
+                scaleInfo.put("dpi", n.path("dpi").asInt(150));
+                // meters_per_pixel será calculado no ReconciliationService quando
+                // tivermos as dimensões da imagem; aqui deixamos null como placeholder.
+                scaleInfo.put("meters_per_pixel", null);
+                scaleInfo.put("image_width_px", null);
+                scaleInfo.put("image_height_px", null);
 
                 return Optional.of(new CvResult(
                         n.path("area_m2").asDouble(0),
@@ -130,7 +171,9 @@ public class ComputerVisionClient {
                         n.path("openings").asInt(0),
                         n.path("confidence").asDouble(0),
                         objectMapper.writeValueAsString(roomsNode),
-                        roomsDetail));
+                        roomsDetail,
+                        roomsGeometry,
+                        scaleInfo));
             }
             if (response.statusCode() == 422) {
                 JsonNode n = objectMapper.readTree(response.body());

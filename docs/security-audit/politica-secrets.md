@@ -13,6 +13,7 @@
 | `JWT_SECRET` | `apps/backend/.env` | Variável de ambiente no Render (backend) | Chave simétrica HMAC-SHA256 | **Crítica** — assina todos os tokens JWT |
 | `DATABASE_PASSWORD` | `apps/backend/.env` | Variável de ambiente no Render (backend) | Senha do role `app_user` no Supabase | **Alta** — acesso a dados via RLS |
 | `SUPABASE_POSTGRES_PASSWORD` | `packages/ai/.env` | ⚠️ Verificar painel do Render (worker) | Senha do superuser `postgres` no Supabase | **Crítica** — bypass de RLS, DDL irrestrito |
+| `SUPABASE_SERVICE_ROLE_KEY` | — (não usada localmente) | Variável de ambiente no Render (backend) — `app.supabase.service-key` | Chave service_role do Supabase Storage | **Crítica** — bypass do RLS do Storage; acesso a todas as plantas originais dos usuários |
 | `WORKER_TOKEN` | `apps/backend/.env` + `packages/ai/.env` | Variável de ambiente no Render (backend + worker) | Token compartilhado backend↔worker | **Média** — autenticação interna entre serviços |
 | `NEXT_PUBLIC_SUPABASE_URL` | `apps/web/.env.local` | Variável de ambiente no Vercel | URL pública do projeto Supabase | **Baixa** — informação pública por design |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `apps/web/.env.local` | Variável de ambiente no Vercel | Chave anon do Supabase (RLS-enforced) | **Média** — segura apenas com RLS ativo |
@@ -47,6 +48,7 @@
 | `JWT_SECRET` | A cada **90 dias** | Suspeita de comprometimento; desligamento de colaborador com acesso | Tokens JWT têm vida longa (configurável); rotação periódica limita janela de exposição |
 | `DATABASE_PASSWORD` (`app_user`) | A cada **180 dias** | Suspeita de comprometimento; mudança de equipe DBA | Role tem acesso limitado por RLS; risco menor que superuser |
 | `SUPABASE_POSTGRES_PASSWORD` | A cada **90 dias** | Qualquer suspeita de exposição; após incidentes de segurança | Superuser bypassa RLS; exposição = comprometimento total do banco |
+| `SUPABASE_SERVICE_ROLE_KEY` | A cada **90 dias** | Qualquer suspeita de exposição; rotação da senha do banco no painel do Supabase (regenera as chaves de API); após incidentes de segurança | service_role bypassa o RLS do Storage; exposição = acesso a todas as plantas originais dos usuários (arquivos sensíveis) |
 | `WORKER_TOKEN` | A cada **180 dias** | Suspeita de vazamento; redeploy do worker | Token interno; risco contido à comunicação backend↔worker |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | A cada **365 dias** | Comprometimento confirmado do RLS | Segura apenas enquanto RLS estiver correto; rotação anual como higiene |
 

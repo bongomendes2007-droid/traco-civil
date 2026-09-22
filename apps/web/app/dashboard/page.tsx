@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { PlanOverlay } from "@/components/plan-overlay";
 import { listAnalises, AnalysisDto } from "@/lib/api";
 import { Maximize2, RefreshCw, Download, ArrowRight, AlertTriangle, DollarSign, AlertOctagon } from "lucide-react";
 
@@ -98,92 +99,36 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Canvas Area (Dot Grid) */}
+          {/* Canvas Area — overlay real da planta ou fallback visual */}
           <div
-            className="flex-1 flex items-center justify-center p-[18px] relative overflow-hidden"
+            className="flex-1 flex items-center justify-center p-[18px] relative overflow-hidden min-h-[320px]"
             style={{
               backgroundColor: "#faf7f2",
               backgroundImage: "radial-gradient(#e6e2d8 1px, transparent 1px)",
               backgroundSize: "22px 22px"
             }}
           >
-            <svg viewBox="0 0 680 460" className="w-full max-w-[640px] h-auto block" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M60 44 H620 M60 38 V50 M620 38 V50" stroke="#b7b2a6" strokeWidth="1.2"/>
-              <rect x="305" y="34" width="70" height="20" rx="4" fill="#faf7f2"/>
-              <text x="340" y="48" fontFamily="Space Mono, monospace" fontSize="11" fill="#6f6f69" textAnchor="middle">15,00 m</text>
-
-              {/* Dynamic room highlight fills from API data (max 4) */}
-              {(analysis?.roomsDetail ?? []).slice(0, 4).map((_, i) => {
-                const col = i % 2;
-                const row = Math.floor(i / 2);
-                const x = col === 0 ? 62 : 342;
-                const y = row === 0 ? 82 : 242;
-                return <rect key={`fill-${i}`} x={x} y={y} width="276" height="156" fill={ACCENT} opacity="0.06"/>;
-              })}
-
-              <rect x="60" y="80" width="560" height="320" stroke="#3a382f" strokeWidth="4"/>
-              <path d="M340 80 V400 M60 240 H620" stroke="#3a382f" strokeWidth="4"/>
-
-              <path d="M340 130 A30 30 0 0 1 310 160" stroke="#3a382f" strokeWidth="1.4" opacity="0.55"/>
-              <path d="M180 80 H250" stroke="#faf7f2" strokeWidth="4"/><path d="M180 80 H250" stroke="#3a382f" strokeWidth="1.2"/>
-              <path d="M430 80 H500" stroke="#faf7f2" strokeWidth="4"/><path d="M430 80 H500" stroke="#3a382f" strokeWidth="1.2"/>
-
-              {/* Dynamic room highlight strokes from API data (max 4) */}
-              {(analysis?.roomsDetail ?? []).slice(0, 4).map((_, i) => {
-                const col = i % 2;
-                const row = Math.floor(i / 2);
-                const x = col === 0 ? 66 : 346;
-                const y = row === 0 ? 86 : 246;
-                return <rect key={`stroke-${i}`} x={x} y={y} width="268" height="148" stroke={ACCENT} strokeWidth="2.5"/>;
-              })}
-
-              <g fill={ACCENT}>
-                <rect x="54" y="74" width="12" height="12"/><rect x="334" y="74" width="12" height="12"/><rect x="614" y="74" width="12" height="12"/>
-                <rect x="54" y="234" width="12" height="12"/><rect x="334" y="234" width="12" height="12"/><rect x="614" y="234" width="12" height="12"/>
-                <rect x="54" y="394" width="12" height="12"/><rect x="334" y="394" width="12" height="12"/><rect x="614" y="394" width="12" height="12"/>
-              </g>
-
-              {/* Dynamic room labels and badges from API data (max 4) */}
-              {(analysis?.roomsDetail ?? []).slice(0, 4).map((room, i) => {
-                const col = i % 2;
-                const row = Math.floor(i / 2);
-                const cx = col === 0 ? 200 : 480;
-                const cy = row === 0 ? 164 : 324;
-                const badgeY = row === 0 ? 96 : 256;
-                const labelWidth = Math.max(72, room.name.length * 8);
-                const confPct = Math.round(room.confidence * 100);
-                return (
-                  <g key={`room-${i}`}>
-                    <text x={cx} y={cy} fontFamily="Space Mono, monospace" fontSize="12" fill="#8a857a" textAnchor="middle" letterSpacing="1">
-                      {room.name.toUpperCase()}
-                    </text>
-                    <text x={cx} y={cy + 18} fontFamily="Space Mono, monospace" fontSize="11" fill="#b2ada2" textAnchor="middle">
-                      {room.area_m2.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m²
-                    </text>
-                    <rect x={col === 0 ? 74 : 354} y={badgeY} width={labelWidth} height="22" rx="5" fill="#111110"/>
-                    <text x={(col === 0 ? 74 : 354) + 10} y={badgeY + 15} fontFamily="Space Mono, monospace" fontSize="11" fontWeight="700" fill="#fff">
-                      {room.name}
-                    </text>
-                    <rect x={(col === 0 ? 74 : 354) + labelWidth + 4} y={badgeY} width="40" height="22" rx="5" fill="#fff" stroke={ACCENT} strokeWidth="1.5"/>
-                    <text x={(col === 0 ? 74 : 354) + labelWidth + 24} y={badgeY + 15} fontFamily="Space Mono, monospace" fontSize="10" fontWeight="700" fill="#111110" textAnchor="middle">
-                      {confPct}%
-                    </text>
-                  </g>
-                );
-              })}
-              {/* Indicator when more than 4 rooms exist */}
-              {(analysis?.roomsDetail?.length ?? 0) > 4 && (
-                <text x="340" y="410" fontFamily="Space Mono, monospace" fontSize="11" fill="#8a857a" textAnchor="middle">
-                  +{analysis!.roomsDetail!.length - 4} outros ambientes — ver tabela abaixo
-                </text>
-              )}
-              {/* Fallback for old analyses without roomsDetail */}
-              {!analysis?.roomsDetail && (analysis?.rooms ?? 0) > 0 && (
-                <text x="340" y="240" fontFamily="Space Mono, monospace" fontSize="12" fill="#b2ada2" textAnchor="middle">
-                  Detalhes por ambiente não disponíveis nesta análise
-                </text>
-              )}
-            </svg>
+            {analysis?.plantaId ? (
+              <PlanOverlay
+                plantaId={analysis.plantaId}
+                roomsGeometry={analysis.roomsGeometry}
+                scaleInfo={analysis.scaleInfo}
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 text-center">
+                <span className="font-mono text-xs text-[#b2ada2]">
+                  {analysis
+                    ? "Imagem da planta não disponível nesta análise"
+                    : "Nenhuma análise carregada"}
+                </span>
+                {(analysis?.roomsDetail?.length ?? 0) > 0 && (
+                  <span className="font-mono text-[11px] text-[#9a9a95]">
+                    {analysis!.roomsDetail!.length} ambientes detectados · ver detalhes abaixo
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Canvas Footer */}

@@ -32,17 +32,20 @@ public class PlantaIntakeService {
     private final PlantaRepository plantaRepository;
     private final ProjectRepository projectRepository;
     private final StorageService storageService;
+    private final SupabaseStorageClient supabaseStorage;
     private final AnalysisEngine analysisEngine;
     private final AuditService auditService;
 
     public PlantaIntakeService(PlantaRepository plantaRepository,
                                ProjectRepository projectRepository,
                                StorageService storageService,
+                               SupabaseStorageClient supabaseStorage,
                                AnalysisEngine analysisEngine,
                                AuditService auditService) {
         this.plantaRepository = plantaRepository;
         this.projectRepository = projectRepository;
         this.storageService = storageService;
+        this.supabaseStorage = supabaseStorage;
         this.analysisEngine = analysisEngine;
         this.auditService = auditService;
     }
@@ -95,9 +98,25 @@ public class PlantaIntakeService {
         // caso contrário a thread do worker não enxergaria a planta (linha ainda
         // não commitada) e a análise morreria em silêncio.
         final Long plantaId = planta.getId();
+        final String storagePath = planta.getStoragePath();
+        final String filename = original;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                // Persistência de longo prazo no Supabase Storage (bucket privado
+                // plantas-originais). Best-effort: falha não derruba a análise — o
+                // disco local continua sendo a fonte imediata do worker.
+                if (supabaseStorage.configured()) {
+                    supabaseStorage.upload(user.getId(), plantaId, filename, java.nio.file.Path.of(storagePath))
+                            .ifPresentOrElse(objectPath -> {
+                                plantaRepository.findById(plantaId).ifPresent(pl -> {
+                                    pl.setStorageUrl(objectPath);
+                                    plantaRepository.save(pl);
+                                });
+                            }, () -> auditService.logEvent("PLANTA_STORAGE_UPLOAD_FAILED", "WARN",
+                                    user.getId(), user.getEmail(), "planta", "upload_storage",
+                                    "plantaId=" + plantaId, false));
+                }
                 analysisEngine.process(plantaId);
             }
         });
