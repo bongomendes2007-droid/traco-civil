@@ -109,10 +109,16 @@ public class PlantaIntakeService {
                 if (supabaseStorage.configured()) {
                     supabaseStorage.upload(user.getId(), plantaId, filename, java.nio.file.Path.of(storagePath))
                             .ifPresentOrElse(objectPath -> {
-                                plantaRepository.findById(plantaId).ifPresent(pl -> {
-                                    pl.setStorageUrl(objectPath);
-                                    plantaRepository.save(pl);
-                                });
+                                // Native query com SET LOCAL app.internal_storage_write = 'true'
+                                // habilita a policy RLS plantas_update_storage_url (V20260922_1)
+                                // nesta transação auto-commit do afterCommit, onde
+                                // app.current_user_id não está disponível.
+                                int updated = plantaRepository.updateStorageUrl(plantaId, objectPath);
+                                if (updated == 0) {
+                                    auditService.logEvent("PLANTA_STORAGE_UPLOAD_FAILED", "WARN",
+                                            user.getId(), user.getEmail(), "planta", "storage_persist",
+                                            "plantaId=" + plantaId + ",RLS_blocked=true", false);
+                                }
                             }, () -> auditService.logEvent("PLANTA_STORAGE_UPLOAD_FAILED", "WARN",
                                     user.getId(), user.getEmail(), "planta", "upload_storage",
                                     "plantaId=" + plantaId, false));

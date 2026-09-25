@@ -87,3 +87,6 @@ RENDER-SETUP-GUIDE.md
 
 # Supabase properties with secrets - use env vars instead
 apps/backend/src/main/resources/application-supabase.properties
+
+# Debug/inspection scripts in packages/ai/
+packages/ai/_*.py
