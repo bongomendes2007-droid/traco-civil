@@ -86,6 +86,7 @@ public class PlantaController {
 
     @DeleteMapping("/api/plantas/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
     public void delete(@PathVariable Long id) {
         User user = currentUser.require();
         Planta planta = plantaRepository.findById(id)
@@ -108,6 +109,7 @@ public class PlantaController {
      * persistido no bucket (upload antigo/Storage desativado).
      */
     @GetMapping("/api/plantas/{id}/image")
+    @Transactional(readOnly = true)
     public Map<String, String> image(@PathVariable Long id) {
         User user = currentUser.require();
         Planta planta = plantaRepository.findById(id)
