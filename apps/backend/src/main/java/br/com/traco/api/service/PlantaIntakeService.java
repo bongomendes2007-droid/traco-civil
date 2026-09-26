@@ -35,19 +35,22 @@ public class PlantaIntakeService {
     private final SupabaseStorageClient supabaseStorage;
     private final AnalysisEngine analysisEngine;
     private final AuditService auditService;
+    private final PlantaStorageUpdater plantaStorageUpdater;
 
     public PlantaIntakeService(PlantaRepository plantaRepository,
                                ProjectRepository projectRepository,
                                StorageService storageService,
                                SupabaseStorageClient supabaseStorage,
                                AnalysisEngine analysisEngine,
-                               AuditService auditService) {
+                               AuditService auditService,
+                               PlantaStorageUpdater plantaStorageUpdater) {
         this.plantaRepository = plantaRepository;
         this.projectRepository = projectRepository;
         this.storageService = storageService;
         this.supabaseStorage = supabaseStorage;
         this.analysisEngine = analysisEngine;
         this.auditService = auditService;
+        this.plantaStorageUpdater = plantaStorageUpdater;
     }
 
     @Transactional
@@ -109,11 +112,10 @@ public class PlantaIntakeService {
                 if (supabaseStorage.configured()) {
                     supabaseStorage.upload(user.getId(), plantaId, filename, java.nio.file.Path.of(storagePath))
                             .ifPresentOrElse(objectPath -> {
-                                // Native query com SET LOCAL app.internal_storage_write = 'true'
-                                // habilita a policy RLS plantas_update_storage_url (V20260922_1)
-                                // nesta transação auto-commit do afterCommit, onde
-                                // app.current_user_id não está disponível.
-                                int updated = plantaRepository.updateStorageUrl(plantaId, objectPath);
+                                // PlantaStorageUpdater executa SET LOCAL + UPDATE em sequência
+                                // na mesma transação REQUIRES_NEW, contornando a limitação do
+                                // @Transactional(REQUIRED) que falha dentro de afterCommit().
+                                int updated = plantaStorageUpdater.updateStorageUrl(plantaId, objectPath);
                                 if (updated == 0) {
                                     auditService.logEvent("PLANTA_STORAGE_UPLOAD_FAILED", "WARN",
                                             user.getId(), user.getEmail(), "planta", "storage_persist",
