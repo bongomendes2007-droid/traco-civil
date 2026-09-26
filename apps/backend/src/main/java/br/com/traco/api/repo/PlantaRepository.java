@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ public interface PlantaRepository extends JpaRepository<Planta, Long> {
      * apenas para esta transação, sem exigir app.current_user_id.
      */
     @Modifying
+    @Transactional
     @Query(value = "SET LOCAL app.internal_storage_write = 'true'; " +
                    "UPDATE plantas SET storage_url = :url WHERE id = :id", nativeQuery = true)
     int updateStorageUrl(@Param("id") Long id, @Param("url") String url);
