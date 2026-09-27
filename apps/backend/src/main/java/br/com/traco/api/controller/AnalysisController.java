@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,9 +38,9 @@ public class AnalysisController {
 
     @GetMapping("/api/analises")
     @Transactional(readOnly = true)
-    public List<AnalysisDto> list() {
+    public List<AnalysisDto> list(@RequestParam(required = false) Long projectId) {
         long t0 = System.currentTimeMillis();
-        log.info("TIMING [list] T0=start");
+        log.info("TIMING [list] T0=start projectId={}", projectId);
 
         long t1Start = System.currentTimeMillis();
         User user = currentUser.require();
@@ -47,7 +48,9 @@ public class AnalysisController {
         log.info("TIMING [list] T1=currentUser.require durationMs={}", t1End - t1Start);
 
         long t2Start = System.currentTimeMillis();
-        List<Analysis> analyses = analysisRepository.findByProjectUserOrderByIdDesc(user);
+        List<Analysis> analyses = projectId != null
+                ? analysisRepository.findByProjectIdAndProjectUserOrderByIdDesc(projectId, user)
+                : analysisRepository.findByProjectUserOrderByIdDesc(user);
         long t2End = System.currentTimeMillis();
         log.info("TIMING [list] T2=repository.query durationMs={} resultSize={}", t2End - t2Start, analyses.size());
 

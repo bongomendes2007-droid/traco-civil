@@ -16,6 +16,12 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
            "where p.user = :user order by a.id desc")
     List<Analysis> findByProjectUserOrderByIdDesc(@Param("user") User user);
 
+    /** Filtra análises por projeto específico do usuário, mantendo JOIN FETCH para evitar N+1. */
+    @Query("select a from Analysis a join fetch a.project p left join fetch a.planta " +
+           "where p.user = :user and p.id = :projectId order by a.id desc")
+    List<Analysis> findByProjectIdAndProjectUserOrderByIdDesc(
+            @Param("projectId") Long projectId, @Param("user") User user);
+
     @Query("select a from Analysis a left join fetch a.project left join fetch a.planta " +
            "order by a.id desc")
     List<Analysis> findAllFetch();

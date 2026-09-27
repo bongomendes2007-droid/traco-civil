@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PlanOverlay } from "@/components/plan-overlay";
-import { listAnalises, AnalysisDto } from "@/lib/api";
-import { Maximize2, RefreshCw, Download, ArrowRight, AlertTriangle, DollarSign, AlertOctagon } from "lucide-react";
+import { listAnalises, listProjetos, AnalysisDto, ProjectDto } from "@/lib/api";
+import { Maximize2, RefreshCw, Download, ArrowRight, AlertTriangle, DollarSign, AlertOctagon, ChevronDown } from "lucide-react";
+
+// Chave compartilhada com a página de Plantas (Item 6) para manter o projeto ativo entre telas.
+const SELECTED_PROJECT_KEY = "traco_dashboard_selected_project";
 
 const ACCENT = "#ff5a1f";
 
@@ -16,38 +19,123 @@ function br(value: number | null | undefined, fractionDigits = 2): string {
 export default function DashboardPage() {
   const [analysis, setAnalysis] = useState<AnalysisDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<ProjectDto[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
 
+  // Load projects on mount
   useEffect(() => {
     let mounted = true;
-    async function load() {
+    async function loadProjects() {
       try {
-        const all = await listAnalises();
-        if (mounted && all.length > 0) {
-          // Pega a análise mais recente (lista vem ordenada por id desc no backend)
-          setAnalysis(all[0]);
-        }
-      } catch (e) {
-        console.error("Failed to load analyses", e);
-      } finally {
-        if (mounted) setLoading(false);
+        const data = await listProjetos();
+        if (mounted) setProjects(data);
+      } catch {
+        // Non-blocking
       }
     }
-    load();
+    loadProjects();
     return () => { mounted = false; };
   }, []);
+
+  // Restore selected project from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SELECTED_PROJECT_KEY);
+      if (stored) setSelectedProjectId(Number(stored));
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
+  // Persist selection and reload analyses when projectId changes
+  const loadAnalyses = useCallback(async (projectId: number | null) => {
+    setLoading(true);
+    try {
+      const all = await listAnalises(projectId ?? undefined);
+      setAnalysis(all.length > 0 ? all[0] : null);
+    } catch (e) {
+      console.error("Failed to load analyses", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAnalyses(selectedProjectId);
+  }, [selectedProjectId, loadAnalyses]);
+
+  const handleProjectChange = (id: number | null) => {
+    setSelectedProjectId(id);
+    setShowProjectDropdown(false);
+    try {
+      if (id != null) {
+        localStorage.setItem(SELECTED_PROJECT_KEY, String(id));
+      } else {
+        localStorage.removeItem(SELECTED_PROJECT_KEY);
+      }
+    } catch {
+      // localStorage unavailable
+    }
+  };
 
   const isSimulated = analysis?.analysisMode === "simulado";
   const isConcluded = analysis?.status === "concluida";
 
+  const selectedProjectName = projects.find((p) => p.id === selectedProjectId)?.name;
+
   const breadcrumbs = [
     { label: "Projetos", href: "/projetos" },
-    { label: analysis?.project ?? "Residencial Alpha", href: "/projetos/alpha" },
-    { label: analysis?.plan ?? "Planta Térreo" },
+    { label: selectedProjectName ?? analysis?.project ?? "Todos os projetos" },
+    ...(analysis?.plan ? [{ label: analysis.plan }] : []),
   ];
 
   return (
     <AppShell breadcrumbs={breadcrumbs}>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_372px] gap-[22px] p-[26px] h-full min-h-0">
+      <div className="p-[26px] pb-0">
+        {/* PROJECT SELECTOR — shared key with Plantas page (Item 6) */}
+        <div className="relative inline-block mb-[22px]">
+          <button
+            onClick={() => setShowProjectDropdown((v) => !v)}
+            disabled={loading}
+            className="inline-flex items-center gap-[8px] px-[14px] py-[9px] bg-white border border-[#e2e0da] rounded-xl text-[14px] font-semibold text-[#111110] hover:border-[#111110] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="font-mono text-[11px] font-bold tracking-[.06em] text-[#9a9a95] uppercase mr-[4px]">Projeto</span>
+            <span className="max-w-[220px] truncate">
+              {selectedProjectName ?? "Todos os projetos"}
+            </span>
+            <ChevronDown size={15} strokeWidth={2.2} className={`text-[#9a9a95] transition-transform ${showProjectDropdown ? "rotate-180" : ""}`} />
+          </button>
+          {showProjectDropdown && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowProjectDropdown(false)} />
+              <div className="absolute left-0 top-full mt-[6px] w-[280px] bg-white border border-[#e2e0da] rounded-xl shadow-lg z-40 py-[6px] max-h-[320px] overflow-auto">
+                <button
+                  onClick={() => handleProjectChange(null)}
+                  className={`w-full text-left px-[14px] py-[10px] text-[14px] hover:bg-[#f7f6f2] transition-colors ${selectedProjectId === null ? "font-bold text-[#111110]" : "text-[#6f6f69]"}`}
+                >
+                  Todos os projetos
+                </button>
+                {projects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleProjectChange(p.id)}
+                    className={`w-full text-left px-[14px] py-[10px] text-[14px] hover:bg-[#f7f6f2] transition-colors truncate ${selectedProjectId === p.id ? "font-bold text-[#111110]" : "text-[#6f6f69]"}`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+                {projects.length === 0 && (
+                  <div className="px-[14px] py-[10px] text-[13px] text-[#9a9a95]">
+                    Nenhum projeto cadastrado
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_372px] gap-[22px] px-[26px] pb-[26px] h-full min-h-0">
 
         {/* CANVAS PANEL */}
         <section className="flex flex-col bg-white border border-[#ececea] rounded-[20px] overflow-hidden min-w-0 shadow-sm">

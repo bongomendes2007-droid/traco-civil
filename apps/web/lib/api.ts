@@ -234,8 +234,9 @@ export async function getPlanta(id: number): Promise<PlantaDto> {
 
 // ---- Análises ----
 
-export async function listAnalises(): Promise<AnalysisDto[]> {
-  return request<AnalysisDto[]>("/api/analises");
+export async function listAnalises(projectId?: number): Promise<AnalysisDto[]> {
+  const params = projectId != null ? `?projectId=${projectId}` : "";
+  return request<AnalysisDto[]>(`/api/analises${params}`);
 }
 
 // ---- Projetos ----
