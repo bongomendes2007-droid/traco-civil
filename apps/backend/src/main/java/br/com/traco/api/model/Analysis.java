@@ -67,15 +67,12 @@ public class Analysis {
     @Column(columnDefinition = "jsonb")
     private List<RoomDetail> roomsDetail;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String elementsJson; // [{"label":"Pilares","value":"24"},...]
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String quantitiesJson; // [{"label":"Concreto","value":"32,45 m³"},...]
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String boxesJson; // [{"x":0.5,"y":0.08,"w":0.43,"h":0.40,"area_m2":34.9},...]
 
