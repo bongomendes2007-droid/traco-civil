@@ -53,8 +53,18 @@ public class CurrentUser {
      */
     @Transactional(readOnly = true)
     public User require() {
+        long t0 = System.currentTimeMillis();
+        log.info("TIMING [CurrentUser.require] T0=start");
+        long t1Start = System.currentTimeMillis();
         applyRlsInTransaction();
-        return optional().orElseThrow(() -> new ApiException("Não autenticado.", 401));
+        long t1End = System.currentTimeMillis();
+        log.info("TIMING [CurrentUser.require] T1=applyRls durationMs={}", t1End - t1Start);
+        long t2Start = System.currentTimeMillis();
+        User user = optional().orElseThrow(() -> new ApiException("Não autenticado.", 401));
+        long t2End = System.currentTimeMillis();
+        log.info("TIMING [CurrentUser.require] T2=userQuery durationMs={}", t2End - t2Start);
+        log.info("TIMING [CurrentUser.require] TOTAL durationMs={}", t2End - t0);
+        return user;
     }
 
     @Transactional(readOnly = true)

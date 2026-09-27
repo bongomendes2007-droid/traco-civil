@@ -7,6 +7,8 @@ import br.com.traco.api.repo.AnalysisRepository;
 import br.com.traco.api.security.CurrentUser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +20,8 @@ import java.util.Map;
 
 @RestController
 public class AnalysisController {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisController.class);
 
     private final AnalysisRepository analysisRepository;
     private final CurrentUser currentUser;
@@ -34,13 +38,31 @@ public class AnalysisController {
     @GetMapping("/api/analises")
     @Transactional(readOnly = true)
     public List<AnalysisDto> list() {
+        long t0 = System.currentTimeMillis();
+        log.info("TIMING [list] T0=start");
+
+        long t1Start = System.currentTimeMillis();
         User user = currentUser.require();
-        return analysisRepository.findByProjectUserOrderByIdDesc(user).stream()
+        long t1End = System.currentTimeMillis();
+        log.info("TIMING [list] T1=currentUser.require durationMs={}", t1End - t1Start);
+
+        long t2Start = System.currentTimeMillis();
+        List<Analysis> analyses = analysisRepository.findByProjectUserOrderByIdDesc(user);
+        long t2End = System.currentTimeMillis();
+        log.info("TIMING [list] T2=repository.query durationMs={} resultSize={}", t2End - t2Start, analyses.size());
+
+        long t3Start = System.currentTimeMillis();
+        List<AnalysisDto> result = analyses.stream()
                 .map(a -> AnalysisDto.from(a,
                         parse(a.getElementsJson()),
                         parse(a.getQuantitiesJson()),
                         parseBoxes(a.getBoxesJson())))
                 .toList();
+        long t3End = System.currentTimeMillis();
+        log.info("TIMING [list] T3=dto.mapping durationMs={}", t3End - t3Start);
+
+        log.info("TIMING [list] TOTAL durationMs={}", t3End - t0);
+        return result;
     }
 
     /** Endpoint legado compatível com a antiga API FastAPI — agora exige autenticação e ownership. */

@@ -92,6 +92,7 @@ public class RlsDataSourceWrapper implements DataSource {
         }
 
         private void applyRlsContext(Connection conn) {
+            long rlsStart = System.currentTimeMillis();
             try {
                 if (conn.getAutoCommit()) {
                     log.warn("RLS context skipped (lazy): connection still in autoCommit=true at query time.");
@@ -130,6 +131,9 @@ public class RlsDataSourceWrapper implements DataSource {
                 }
             } catch (SQLException e) {
                 log.warn("Failed to apply RLS context (lazy): {}", e.getMessage());
+            } finally {
+                long rlsDuration = System.currentTimeMillis() - rlsStart;
+                log.info("TIMING [RlsDataSourceWrapper] applyRlsContext durationMs={}", rlsDuration);
             }
         }
 
