@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { AppShell } from "@/components/layout/app-shell";
 import {
   listProjetos,
   createProjeto,
@@ -202,48 +202,11 @@ export default function ProjetosPage() {
     );
   };
 
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f7f6f2",
-        fontFamily: FONT,
-        color: "#111110",
-        WebkitFontSmoothing: "antialiased",
-      }}
-    >
-      <header style={{ borderBottom: "1px solid #e2e0da", background: "#f7f6f2" }}>
-        <div
-          style={{
-            maxWidth: 1180,
-            margin: "0 auto",
-            padding: "18px 40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <Link href="/dashboard" style={{ display: "inline-flex" }}>
-            <Image
-              src="/assets/traco-civil-logo.png"
-              alt="TRAÇO CIVIL"
-              width={156}
-              height={26}
-              style={{ height: 26, width: "auto", display: "block" }}
-            />
-          </Link>
-          <nav style={{ display: "flex", gap: 26, fontSize: 14, fontWeight: 500, flexWrap: "wrap" }}>
-            <Link href="/dashboard" style={{ color: "#6f6f69" }}>Dashboard</Link>
-            <Link href="/projetos" style={{ color: "#111110", fontWeight: 700 }}>Projetos</Link>
-            <Link href="/plantas" style={{ color: "#6f6f69" }}>Plantas</Link>
-            <Link href="/upload" style={{ color: "#6f6f69" }}>Nova Análise</Link>
-          </nav>
-        </div>
-      </header>
+  const breadcrumbs = [{ label: "Projetos" }];
 
-      <div className="pj-wrap" style={{ maxWidth: 1180, margin: "0 auto", padding: "44px 40px" }}>
+  return (
+    <AppShell breadcrumbs={breadcrumbs}>
+      <div className="max-w-[1180px] mx-auto px-10 py-[26px]">
         <div
           style={{
             display: "flex",
@@ -791,9 +754,8 @@ export default function ProjetosPage() {
         }
         @media (max-width: 600px) {
           .pj-grid { grid-template-columns: 1fr !important; }
-          .pj-wrap { padding: 28px 20px !important; }
         }
       `}</style>
-    </main>
+    </AppShell>
   );
 }
