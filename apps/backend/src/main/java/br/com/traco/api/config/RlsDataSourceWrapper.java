@@ -37,13 +37,19 @@ public class RlsDataSourceWrapper implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
+        long t0 = System.currentTimeMillis();
         Connection conn = delegate.getConnection();
+        long elapsed = System.currentTimeMillis() - t0;
+        log.info("TIMING [RlsDataSourceWrapper] getConnection durationMs={}", elapsed);
         return wrapConnection(conn);
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
+        long t0 = System.currentTimeMillis();
         Connection conn = delegate.getConnection(username, password);
+        long elapsed = System.currentTimeMillis() - t0;
+        log.info("TIMING [RlsDataSourceWrapper] getConnection(user/pass) durationMs={}", elapsed);
         return wrapConnection(conn);
     }
 
