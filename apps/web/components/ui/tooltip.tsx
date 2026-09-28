@@ -42,7 +42,7 @@ export function Tooltip({ children, content, side = "top" }: TooltipProps) {
       {isVisible && (
         <div
           className={cn(
-            "fixed z-50 px-3 py-1.5 text-xs font-medium text-papel bg-grafite-2 border border-grafite-3 rounded-sm shadow-lg pointer-events-none animate-in fade-in-0 zoom-in-95 duration-200",
+            "fixed z-50 px-3 py-1.5 text-xs font-medium text-[#111110] bg-[#f7f6f2] border border-[#e2e0da] rounded-sm shadow-lg pointer-events-none animate-in fade-in-0 zoom-in-95 duration-200",
             side === "top" && "-translate-x-1/2 -translate-y-full mt-[-8px]",
             side === "bottom" && "-translate-x-1/2 translate-y-full mb-[-8px]",
             side === "left" && "-translate-x-full -translate-y-1/2 mr-[-8px]",

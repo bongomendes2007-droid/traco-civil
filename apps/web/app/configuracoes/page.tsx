@@ -103,10 +103,10 @@ export default function ConfiguracoesPage() {
       <div className="p-8 max-w-6xl mx-auto w-full">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-white tracking-tight mb-2">
+          <h1 className="text-[38px] font-bold tracking-[-.02em] text-[#111110] mb-2">
             Configurações
           </h1>
-          <p className="text-grafite-3 text-sm">
+          <p className="text-[#9a9a95] text-sm">
             Gerencie seu perfil, preferências técnicas e segurança da conta.
           </p>
         </div>
@@ -132,13 +132,13 @@ export default function ConfiguracoesPage() {
                   onClick={() => setActive(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? "bg-grafite-2 text-white border-l-2 border-traco-laranja pl-[14px]"
-                      : "text-grafite-3 hover:bg-grafite-2/50 hover:text-papel border-l-2 border-transparent pl-[14px]"
+                      ? "bg-[#f7f6f2] text-[#111110] border-l-2 border-[#ff5a1f] pl-[14px]"
+                      : "text-[#9a9a95] hover:bg-[#f7f6f2]/50 hover:text-[#111110] border-l-2 border-transparent pl-[14px]"
                   }`}
                 >
                   <Icon
                     size={16}
-                    className={isActive ? "text-traco-laranja" : "opacity-60"}
+                    className={isActive ? "text-[#ff5a1f]" : "opacity-60"}
                   />
                   {tab.label}
                 </button>
@@ -160,17 +160,17 @@ export default function ConfiguracoesPage() {
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-traco-laranja/20 border border-traco-laranja/30 flex items-center justify-center text-xl font-bold text-traco-laranja font-mono">
+                      <div className="w-16 h-16 rounded-full bg-[#ff5a1f]/20 border border-[#ff5a1f]/30 flex items-center justify-center text-xl font-bold text-[#ff5a1f] font-mono">
                         {userLoading ? "…" : deriveInitials(profile.name)}
                       </div>
                       <div>
                         <Button variant="outline" size="sm" className="text-xs mr-2">
                           Alterar foto
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-xs text-grafite-3">
+                        <Button variant="ghost" size="sm" className="text-xs text-[#9a9a95]">
                           Remover
                         </Button>
-                        <p className="text-[11px] text-grafite-3 font-mono mt-2">
+                        <p className="text-[11px] text-[#9a9a95] font-mono mt-2">
                           PNG ou JPG • máx. 2MB
                         </p>
                       </div>
@@ -180,7 +180,7 @@ export default function ConfiguracoesPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Nome completo
                         </label>
                         <Input
@@ -189,7 +189,7 @@ export default function ConfiguracoesPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           E-mail profissional
                         </label>
                         <Input
@@ -199,7 +199,7 @@ export default function ConfiguracoesPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Registro profissional
                         </label>
                         <Input
@@ -208,7 +208,7 @@ export default function ConfiguracoesPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Função
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -218,8 +218,8 @@ export default function ConfiguracoesPage() {
                               onClick={() => setProfile({ ...profile, role })}
                               className={`p-2.5 rounded-sm border text-xs font-medium transition-all capitalize ${
                                 profile.role === role
-                                  ? "border-traco-laranja bg-traco-laranja/10 text-traco-laranja"
-                                  : "border-grafite-3 text-grafite-3 hover:border-grafite-2 hover:text-papel"
+                                  ? "border-[#ff5a1f] bg-[#ff5a1f]/10 text-[#ff5a1f]"
+                                  : "border-[#e2e0da] text-[#9a9a95] hover:border-[#ececea] hover:text-[#111110]"
                               }`}
                             >
                               {role}
@@ -253,7 +253,7 @@ export default function ConfiguracoesPage() {
                   <CardContent className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Margem de estimativa padrão
                         </label>
                         <div className="grid grid-cols-4 gap-2">
@@ -263,20 +263,20 @@ export default function ConfiguracoesPage() {
                               onClick={() => setPrefs({ ...prefs, margin: m })}
                               className={`p-2.5 rounded-sm border font-mono text-xs font-semibold transition-all ${
                                 prefs.margin === m
-                                  ? "border-traco-laranja bg-traco-laranja/10 text-traco-laranja"
-                                  : "border-grafite-3 text-grafite-3 hover:border-grafite-2 hover:text-papel"
+                                  ? "border-[#ff5a1f] bg-[#ff5a1f]/10 text-[#ff5a1f]"
+                                  : "border-[#e2e0da] text-[#9a9a95] hover:border-[#ececea] hover:text-[#111110]"
                               }`}
                             >
                               ±{m}%
                             </button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-grafite-3 mt-2 leading-relaxed">
+                        <p className="text-[11px] text-[#9a9a95] mt-2 leading-relaxed">
                           A regra da marca exige que a margem esteja sempre visível ao lado de qualquer valor gerado.
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Base de preços padrão
                         </label>
                         <div className="space-y-2">
@@ -286,8 +286,8 @@ export default function ConfiguracoesPage() {
                               onClick={() => setPrefs({ ...prefs, base: b })}
                               className={`w-full flex items-center justify-between p-3 rounded-sm border text-xs font-mono transition-all ${
                                 prefs.base === b
-                                  ? "border-traco-laranja bg-traco-laranja/10 text-traco-laranja"
-                                  : "border-grafite-3 text-grafite-3 hover:border-grafite-2 hover:text-papel"
+                                  ? "border-[#ff5a1f] bg-[#ff5a1f]/10 text-[#ff5a1f]"
+                                  : "border-[#e2e0da] text-[#9a9a95] hover:border-[#ececea] hover:text-[#111110]"
                               }`}
                             >
                               {b}
@@ -303,10 +303,10 @@ export default function ConfiguracoesPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <p className="text-sm font-medium text-papel">
+                          <p className="text-sm font-medium text-[#111110]">
                             Exibir score de confiança da IA
                           </p>
-                          <p className="text-xs text-grafite-3 mt-0.5">
+                          <p className="text-xs text-[#9a9a95] mt-0.5">
                             Mostra a certeza da detecção em cada análise no canvas e no histórico.
                           </p>
                         </div>
@@ -318,14 +318,14 @@ export default function ConfiguracoesPage() {
 
                       <div className="flex items-center justify-between gap-4 opacity-70">
                         <div>
-                          <p className="text-sm font-medium text-papel flex items-center gap-2">
+                          <p className="text-sm font-medium text-[#111110] flex items-center gap-2">
                             Números em tipografia mono
                             <Badge variant="mono" className="text-[10px]">
                               <Lock size={10} className="mr-1" />
                               Regra da marca
                             </Badge>
                           </p>
-                          <p className="text-xs text-grafite-3 mt-0.5">
+                          <p className="text-xs text-[#9a9a95] mt-0.5">
                             IBM Plex Mono para todo valor calculado — obrigatório pela identidade visual (manual v2.0, seção 09).
                           </p>
                         </div>
@@ -380,8 +380,8 @@ export default function ConfiguracoesPage() {
                   ).map((item) => (
                     <div key={item.key} className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium text-papel">{item.title}</p>
-                        <p className="text-xs text-grafite-3 mt-0.5">{item.desc}</p>
+                        <p className="text-sm font-medium text-[#111110]">{item.title}</p>
+                        <p className="text-xs text-[#9a9a95] mt-0.5">{item.desc}</p>
                       </div>
                       <Switch
                         checked={notifs[item.key]}
@@ -403,16 +403,16 @@ export default function ConfiguracoesPage() {
             {/* ================= PLANO ================= */}
             {active === "plano" && (
               <>
-                <Card className="border-traco-laranja/40 bg-traco-laranja/5">
+                <Card className="border-[#ff5a1f]/40 bg-[#ff5a1f]/5">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-traco-laranja/20 border border-traco-laranja/30 flex items-center justify-center text-traco-laranja">
+                        <div className="w-10 h-10 rounded-lg bg-[#ff5a1f]/20 border border-[#ff5a1f]/30 flex items-center justify-center text-[#ff5a1f]">
                           <Crown size={18} />
                         </div>
                         <div>
-                          <p className="font-display font-semibold text-white">Plano Pro</p>
-                          <p className="text-xs text-grafite-3 font-mono">
+                          <p className="font-semibold text-[#111110]">Plano Pro</p>
+                          <p className="text-xs text-[#9a9a95] font-mono">
                             R$ 149/mês • renova em 01 Set 2026
                           </p>
                         </div>
@@ -421,28 +421,28 @@ export default function ConfiguracoesPage() {
                     </div>
 
                     <div className="mb-2 flex items-center justify-between text-xs">
-                      <span className="text-grafite-3">Análises neste ciclo</span>
-                      <span className="font-mono text-white">
-                        7 <span className="text-grafite-3">/ 50</span>
+                      <span className="text-[#9a9a95]">Análises neste ciclo</span>
+                      <span className="font-mono text-[#111110]">
+                        7 <span className="text-[#9a9a95]">/ 50</span>
                       </span>
                     </div>
                     <Progress value={14} className="h-2" />
-                    <p className="text-[11px] text-grafite-3 font-mono mt-2">
+                    <p className="text-[11px] text-[#9a9a95] font-mono mt-2">
                       43 análises restantes • armazenamento 17,8 MB de 5 GB
                     </p>
                   </CardContent>
                 </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="bg-grafite-2/20">
+                  <Card className="bg-[#f7f6f2]/20">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
-                        <Zap size={16} className="text-grafite-3" />
-                        <p className="font-display font-semibold text-papel text-sm">Grátis</p>
+                        <Zap size={16} className="text-[#9a9a95]" />
+                        <p className="font-semibold text-[#111110] text-sm">Grátis</p>
                       </div>
-                      <p className="font-mono text-2xl text-white mb-1">R$ 0</p>
-                      <p className="text-[11px] text-grafite-3 font-mono mb-4">3 análises/mês</p>
-                      <ul className="space-y-1.5 text-xs text-grafite-3">
+                      <p className="font-mono text-2xl text-[#111110] mb-1">R$ 0</p>
+                      <p className="text-[11px] text-[#9a9a95] font-mono mb-4">3 análises/mês</p>
+                      <ul className="space-y-1.5 text-xs text-[#9a9a95]">
                         <li>• 1 projeto ativo</li>
                         <li>• Exportação em PDF</li>
                         <li>• Base SINAPI padrão</li>
@@ -450,18 +450,18 @@ export default function ConfiguracoesPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-traco-laranja/40 bg-traco-laranja/5">
+                  <Card className="border-[#ff5a1f]/40 bg-[#ff5a1f]/5">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Crown size={16} className="text-traco-laranja" />
-                          <p className="font-display font-semibold text-white text-sm">Pro</p>
+                          <Crown size={16} className="text-[#ff5a1f]" />
+                          <p className="font-semibold text-[#111110] text-sm">Pro</p>
                         </div>
                         <Badge variant="default" className="font-mono text-[10px]">SEU PLANO</Badge>
                       </div>
-                      <p className="font-mono text-2xl text-traco-laranja mb-1">R$ 149</p>
-                      <p className="text-[11px] text-grafite-3 font-mono mb-4">50 análises/mês</p>
-                      <ul className="space-y-1.5 text-xs text-papel/70">
+                      <p className="font-mono text-2xl text-[#ff5a1f] mb-1">R$ 149</p>
+                      <p className="text-[11px] text-[#9a9a95] font-mono mb-4">50 análises/mês</p>
+                      <ul className="space-y-1.5 text-xs text-[#111110]/70">
                         <li>• Projetos ilimitados</li>
                         <li>• Exportação PDF + Excel</li>
                         <li>• BDI e encargos ajustáveis</li>
@@ -470,15 +470,15 @@ export default function ConfiguracoesPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-grafite-2/20">
+                  <Card className="bg-[#f7f6f2]/20">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
-                        <Building2 size={16} className="text-grafite-3" />
-                        <p className="font-display font-semibold text-papel text-sm">Enterprise</p>
+                        <Building2 size={16} className="text-[#9a9a95]" />
+                        <p className="font-semibold text-[#111110] text-sm">Enterprise</p>
                       </div>
-                      <p className="font-mono text-2xl text-white mb-1">Sob consulta</p>
-                      <p className="text-[11px] text-grafite-3 font-mono mb-4">análises ilimitadas</p>
-                      <ul className="space-y-1.5 text-xs text-grafite-3">
+                      <p className="font-mono text-2xl text-[#111110] mb-1">Sob consulta</p>
+                      <p className="text-[11px] text-[#9a9a95] font-mono mb-4">análises ilimitadas</p>
+                      <ul className="space-y-1.5 text-xs text-[#9a9a95]">
                         <li>• API dedicada</li>
                         <li>• Base de preços própria</li>
                         <li>• SSO e auditoria</li>
@@ -497,11 +497,11 @@ export default function ConfiguracoesPage() {
                   <CardContent className="p-0">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-grafite-3 bg-grafite-2/30">
-                          <th className="text-left py-2.5 px-6 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold">Competência</th>
-                          <th className="text-left py-2.5 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold">Valor</th>
-                          <th className="text-left py-2.5 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold">Status</th>
-                          <th className="text-right py-2.5 px-6 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold">Nota</th>
+                        <tr className="border-b border-[#e2e0da] bg-[#f7f6f2]/30">
+                          <th className="text-left py-2.5 px-6 font-mono text-xs uppercase tracking-wider text-[#9a9a95] font-semibold">Competência</th>
+                          <th className="text-left py-2.5 px-4 font-mono text-xs uppercase tracking-wider text-[#9a9a95] font-semibold">Valor</th>
+                          <th className="text-left py-2.5 px-4 font-mono text-xs uppercase tracking-wider text-[#9a9a95] font-semibold">Status</th>
+                          <th className="text-right py-2.5 px-6 font-mono text-xs uppercase tracking-wider text-[#9a9a95] font-semibold">Nota</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -510,9 +510,9 @@ export default function ConfiguracoesPage() {
                           { month: "Jul 2026", value: "R$ 149,00", status: "paga" },
                           { month: "Jun 2026", value: "R$ 149,00", status: "paga" },
                         ].map((inv, i) => (
-                          <tr key={i} className="border-b border-grafite-2 last:border-0 hover:bg-grafite-2/30 transition-colors">
-                            <td className="py-3 px-6 font-mono text-xs text-papel/80">{inv.month}</td>
-                            <td className="py-3 px-4 font-mono text-sm text-white">{inv.value}</td>
+                          <tr key={i} className="border-b border-[#ececea] last:border-0 hover:bg-[#f7f6f2]/30 transition-colors">
+                            <td className="py-3 px-6 font-mono text-xs text-[#111110]/80">{inv.month}</td>
+                            <td className="py-3 px-4 font-mono text-sm text-[#111110]">{inv.value}</td>
                             <td className="py-3 px-4">
                               <Badge variant="success" className="font-mono text-[10px]">PAGA</Badge>
                             </td>
@@ -537,26 +537,26 @@ export default function ConfiguracoesPage() {
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <KeyRound size={16} className="text-traco-laranja" />
+                      <KeyRound size={16} className="text-[#ff5a1f]" />
                       Alterar senha
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Senha atual
                         </label>
                         <Input type="password" placeholder="••••••••" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Nova senha
                         </label>
                         <Input type="password" placeholder="mín. 6 caracteres" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-papel mb-2 uppercase tracking-wider font-mono">
+                        <label className="block text-xs font-medium text-[#111110] mb-2 uppercase tracking-wider font-mono">
                           Confirmar nova senha
                         </label>
                         <Input type="password" placeholder="••••••••" />
@@ -575,11 +575,11 @@ export default function ConfiguracoesPage() {
                   <CardContent className="p-6 space-y-5">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium text-papel flex items-center gap-2">
-                          <ShieldCheck size={16} className="text-traco-laranja" />
+                        <p className="text-sm font-medium text-[#111110] flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-[#ff5a1f]" />
                           Autenticação em dois fatores (2FA)
                         </p>
-                        <p className="text-xs text-grafite-3 mt-0.5">
+                        <p className="text-xs text-[#9a9a95] mt-0.5">
                           Código adicional via app autenticador ao entrar em dispositivos novos.
                         </p>
                       </div>
@@ -589,37 +589,37 @@ export default function ConfiguracoesPage() {
                     <Separator />
 
                     <div>
-                      <p className="text-xs uppercase tracking-wider text-grafite-3 font-semibold mb-3">
+                      <p className="text-xs uppercase tracking-wider text-[#9a9a95] font-semibold mb-3">
                         Sessões ativas
                       </p>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 rounded-sm border border-grafite-3 bg-grafite-2/30">
+                        <div className="flex items-center justify-between p-3 rounded-sm border border-[#e2e0da] bg-[#f7f6f2]/30">
                           <div className="flex items-center gap-3">
-                            <MonitorSmartphone size={18} className="text-traco-laranja" />
+                            <MonitorSmartphone size={18} className="text-[#ff5a1f]" />
                             <div>
-                              <p className="text-sm text-white font-medium">
+                              <p className="text-sm text-[#111110] font-medium">
                                 Windows 11 • Chrome
                               </p>
-                              <p className="text-[11px] text-grafite-3 font-mono">
+                              <p className="text-[11px] text-[#9a9a95] font-mono">
                                 São Paulo, BR • agora
                               </p>
                             </div>
                           </div>
                           <Badge variant="default" className="font-mono text-[10px]">SESSÃO ATUAL</Badge>
                         </div>
-                        <div className="flex items-center justify-between p-3 rounded-sm border border-grafite-3">
+                        <div className="flex items-center justify-between p-3 rounded-sm border border-[#e2e0da]">
                           <div className="flex items-center gap-3">
-                            <Smartphone size={18} className="text-grafite-3" />
+                            <Smartphone size={18} className="text-[#9a9a95]" />
                             <div>
-                              <p className="text-sm text-papel/80 font-medium">
+                              <p className="text-sm text-[#111110]/80 font-medium">
                                 Android • Chrome
                               </p>
-                              <p className="text-[11px] text-grafite-3 font-mono">
+                              <p className="text-[11px] text-[#9a9a95] font-mono">
                                 São Paulo, BR • há 2 dias
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-xs gap-1.5 h-8 text-grafite-3 hover:text-red-400">
+                          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-xs gap-1.5 h-8 text-[#9a9a95] hover:text-red-400">
                             <LogOut size={13} />
                             Encerrar
                           </Button>
@@ -639,8 +639,8 @@ export default function ConfiguracoesPage() {
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm font-medium text-papel">Exportar meus dados</p>
-                        <p className="text-xs text-grafite-3 mt-0.5">
+                        <p className="text-sm font-medium text-[#111110]">Exportar meus dados</p>
+                        <p className="text-xs text-[#9a9a95] mt-0.5">
                           Baixe um arquivo com projetos, plantas e análises em até 24h.
                         </p>
                       </div>
@@ -653,7 +653,7 @@ export default function ConfiguracoesPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="text-sm font-medium text-red-400">Excluir conta</p>
-                        <p className="text-xs text-grafite-3 mt-0.5">
+                        <p className="text-xs text-[#9a9a95] mt-0.5">
                           Remove permanentemente todos os projetos, plantas e orçamentos.
                         </p>
                       </div>
