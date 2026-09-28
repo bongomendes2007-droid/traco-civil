@@ -57,9 +57,12 @@ public class PlantaController {
 
     @GetMapping("/api/plantas")
     @Transactional(readOnly = true)
-    public List<PlantaDto> list() {
+    public List<PlantaDto> list(@RequestParam(required = false) Long projectId) {
         User user = currentUser.require();
-        return plantaRepository.findByProjectUserOrderByIdDesc(user).stream()
+        List<Planta> plantas = projectId != null
+                ? plantaRepository.findByProjectIdAndProjectUserOrderByIdDesc(projectId, user)
+                : plantaRepository.findByProjectUserOrderByIdDesc(user);
+        return plantas.stream()
                 .map(this::withAnalysisMode)
                 .toList();
     }

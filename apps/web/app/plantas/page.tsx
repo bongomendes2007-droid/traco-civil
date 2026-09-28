@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { listPlantas, type PlantaDto } from "@/lib/api";
+import Link from "next/link";
 import {
   Upload,
   Search,
@@ -16,32 +18,41 @@ import {
   Eye,
   Download,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 const ACCENT = "#ff5a1f";
+// Chave compartilhada com Dashboard (Item 5) para manter o projeto ativo entre telas.
+const SELECTED_PROJECT_KEY = "traco_dashboard_selected_project";
 
 type PlantStatus = "done" | "proc" | "err";
 
-interface Plant {
-  name: string;
-  project: string;
-  ext: string;
-  size: string;
-  date: string;
-  area?: string;
-  rooms?: string;
-  status: PlantStatus;
+function mapStatus(status: string): PlantStatus {
+  const s = status.toLowerCase();
+  if (s === "concluida" || s === "concluída" || s === "done") return "done";
+  if (s === "processando" || s === "processing" || s === "proc") return "proc";
+  if (s === "erro" || s === "error" || s === "err" || s === "falha") return "err";
+  return "proc";
 }
 
-const plants: Plant[] = [
-  { name: "Planta Térreo.pdf", project: "Residencial Alpha", ext: "PDF", size: "2.4 MB", date: "14 Ago 2026", area: "142,6 m²", rooms: "4", status: "done" },
-  { name: "Pavimento Superior.pdf", project: "Residencial Alpha", ext: "PDF", size: "2.1 MB", date: "13 Ago 2026", area: "128,4 m²", rooms: "5", status: "done" },
-  { name: "Subsolo Garagem.pdf", project: "Edifício Comercial Beta", ext: "PDF", size: "3.8 MB", date: "14 Ago 2026", status: "proc" },
-  { name: "Planta Comercial Térreo.dwg", project: "Edifício Comercial Beta", ext: "DWG", size: "5.6 MB", date: "08 Ago 2026", area: "486,2 m²", rooms: "12", status: "done" },
-  { name: "Fachada Frontal.png", project: "Residencial Alpha", ext: "PNG", size: "840 KB", date: "13 Ago 2026", status: "err" },
-  { name: "Galpão Principal.pdf", project: "Galpão Industrial Gamma", ext: "PDF", size: "1.9 MB", date: "01 Ago 2026", area: "720,0 m²", rooms: "6", status: "done" },
-  { name: "Casa Térrea Delta.pdf", project: "Casa Térrea Delta", ext: "PDF", size: "1.2 MB", date: "14 Ago 2026", status: "proc" },
-];
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 const filters = [
   { id: "all", label: "Todas" },
@@ -52,11 +63,89 @@ const filters = [
 
 export default function PlantasPage() {
   const [activeFilter, setActiveFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [plants, setPlants] = useState<PlantaDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
-  const filteredPlants = plants.filter((p) => {
-    if (activeFilter === "all") return true;
-    return p.status === activeFilter;
-  });
+  // Restore selected project from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SELECTED_PROJECT_KEY);
+      if (stored) setSelectedProjectId(Number(stored));
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
+
+  // Load plantas filtered by selected project
+  useEffect(() => {
+    let mounted = true;
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listPlantas(selectedProjectId ?? undefined);
+        if (mounted) setPlants(data);
+      } catch (err: any) {
+        if (mounted) {
+          const status = err?.status;
+          setError(
+            status === 502 || status === 504 || !status
+              ? "O servidor está iniciando. Tente novamente em alguns segundos."
+              : "Não foi possível carregar as plantas. Tente novamente."
+          );
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    run();
+    return () => { mounted = false; };
+  }, [selectedProjectId]);
+
+  // Listen for localStorage changes from other tabs/pages
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key === SELECTED_PROJECT_KEY) {
+        setSelectedProjectId(e.newValue ? Number(e.newValue) : null);
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const mappedPlants = useMemo(() => {
+    return plants.map((p) => ({
+      ...p,
+      uiStatus: mapStatus(p.status),
+    }));
+  }, [plants]);
+
+  const filteredPlants = useMemo(() => {
+    return mappedPlants.filter((p) => {
+      if (activeFilter !== "all" && p.uiStatus !== activeFilter) return false;
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const nameMatch = p.name.toLowerCase().includes(q);
+        const projMatch = p.project?.toLowerCase().includes(q);
+        if (!nameMatch && !projMatch) return false;
+      }
+      return true;
+    });
+  }, [mappedPlants, activeFilter, search]);
+
+  // Dynamic stats
+  const stats = useMemo(() => {
+    const total = mappedPlants.length;
+    const doneCount = mappedPlants.filter((p) => p.uiStatus === "done").length;
+    const procCount = mappedPlants.filter((p) => p.uiStatus === "proc").length;
+    const totalBytes = mappedPlants.reduce((sum, p) => sum + (p.sizeBytes || 0), 0);
+    const totalArea = mappedPlants.reduce((sum, p) => sum + (p.area || 0), 0);
+    const totalRooms = mappedPlants.reduce((sum, p) => sum + (p.rooms || 0), 0);
+    return { total, doneCount, procCount, totalBytes, totalArea, totalRooms };
+  }, [mappedPlants]);
 
   const breadcrumbs = [
     { label: "Projetos", href: "/projetos" },
@@ -71,16 +160,17 @@ export default function PlantasPage() {
           <div>
             <h1 className="text-[38px] font-bold tracking-[-.02em] mb-1.5">Plantas</h1>
             <p className="font-mono text-[13px] text-[#9a9a95]">
-              7 arquivos · 4 analisadas · 2 em processamento
+              {stats.total} arquivo{stats.total !== 1 ? "s" : ""} &middot; {stats.doneCount} analisada{stats.doneCount !== 1 ? "s" : ""} &middot; {stats.procCount} em processamento
             </p>
           </div>
-          <button
+          <Link
+            href="/upload"
             className="inline-flex items-center gap-[9px] text-[15px] font-bold px-[22px] py-[13px] rounded-xl hover:opacity-90 transition-opacity"
             style={{ background: ACCENT, color: "#111110" }}
           >
             <Upload size={17} strokeWidth={2.2} />
             Nova Planta
-          </button>
+          </Link>
         </div>
 
         {/* Stats Grid */}
@@ -92,7 +182,7 @@ export default function PlantasPage() {
               <FileText size={16} strokeWidth={2} className="text-[#c9c6bd]" />
             </div>
             <div className="text-[28px] font-bold">
-              7<span className="font-mono text-[13px] font-normal text-[#9a9a95]"> plantas</span>
+              {stats.total}<span className="font-mono text-[13px] font-normal text-[#9a9a95]"> plantas</span>
             </div>
           </div>
 
@@ -103,7 +193,7 @@ export default function PlantasPage() {
               <Database size={16} strokeWidth={2} className="text-[#c9c6bd]" />
             </div>
             <div className="text-[28px] font-bold">
-              17,8<span className="font-mono text-[13px] font-normal text-[#9a9a95]"> MB</span>
+              {fmtSize(stats.totalBytes)}
             </div>
           </div>
 
@@ -114,7 +204,9 @@ export default function PlantasPage() {
               <PenTool size={16} strokeWidth={2} style={{ color: ACCENT }} />
             </div>
             <div className="text-[28px] font-bold" style={{ color: ACCENT }}>
-              1.477,2<span className="font-mono text-[13px] font-normal text-[#b8b6ae]"> m²</span>
+              {stats.totalArea > 0
+                ? stats.totalArea.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                : "0,0"}<span className="font-mono text-[13px] font-normal text-[#b8b6ae]"> m²</span>
             </div>
           </div>
 
@@ -125,7 +217,7 @@ export default function PlantasPage() {
               <LayoutGrid size={16} strokeWidth={2} className="text-[#c9c6bd]" />
             </div>
             <div className="text-[28px] font-bold">
-              27<span className="font-mono text-[13px] font-normal text-[#9a9a95]"> cômodos</span>
+              {stats.totalRooms}<span className="font-mono text-[13px] font-normal text-[#9a9a95]"> cômodos</span>
             </div>
           </div>
         </div>
@@ -136,6 +228,8 @@ export default function PlantasPage() {
             <Search size={17} strokeWidth={2} className="text-[#9a9a95]" />
             <input
               type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome ou projeto..."
               className="bg-transparent border-none outline-none text-sm text-[#111110] placeholder:text-[#9a9a95] w-full"
             />
@@ -158,21 +252,55 @@ export default function PlantasPage() {
           </div>
         </div>
 
-        {/* Plants Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredPlants.map((plant, idx) => (
-            <PlantCard key={idx} plant={plant} />
-          ))}
-        </div>
+        {/* Content */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 size={32} className="animate-spin text-[#9a9a95]" />
+            <span className="font-mono text-[13px] text-[#9a9a95]">Carregando plantas...</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-[#b3261e] text-[15px] mb-4">{error}</p>
+            <button
+              onClick={() => setSelectedProjectId(selectedProjectId)}
+              className="bg-[#111110] text-white border-none rounded-[11px] px-[22px] py-[11px] text-[14px] font-semibold cursor-pointer"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : filteredPlants.length === 0 ? (
+          <div className="text-center py-20 bg-white border border-dashed border-[#e2e0da] rounded-[18px]">
+            <div
+              className="w-14 h-14 rounded-[14px] mx-auto mb-4 flex items-center justify-center"
+              style={{ background: "#fbeee7", color: ACCENT }}
+            >
+              <FileText size={26} strokeWidth={2} />
+            </div>
+            <h3 className="text-[22px] font-bold mb-2 tracking-[-.01em]">
+              {search || activeFilter !== "all" ? "Nenhuma planta corresponde" : "Nenhuma planta ainda"}
+            </h3>
+            <p className="font-mono text-[13px] text-[#9a9a95] max-w-[420px] mx-auto leading-relaxed">
+              {search || activeFilter !== "all"
+                ? "Ajuste a busca/filtro ou envie uma nova planta."
+                : "Envie sua primeira planta para iniciar a análise de IA e gerar o orçamento estimativo."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredPlants.map((plant) => (
+              <PlantCard key={plant.id} plant={plant} />
+            ))}
+          </div>
+        )}
       </div>
     </AppShell>
   );
 }
 
-function PlantCard({ plant }: { plant: Plant }) {
-  const isDone = plant.status === "done";
-  const isProc = plant.status === "proc";
-  const isErr = plant.status === "err";
+function PlantCard({ plant }: { plant: PlantaDto & { uiStatus: PlantStatus } }) {
+  const isDone = plant.uiStatus === "done";
+  const isProc = plant.uiStatus === "proc";
+  const isErr = plant.uiStatus === "err";
 
   const planOpacity = isDone ? 1 : isProc ? 0.35 : 0.3;
   const areaColor = isDone ? "#111110" : "#c9c6bd";
@@ -197,6 +325,10 @@ function PlantCard({ plant }: { plant: Plant }) {
     BtnIcon = RotateCcw;
   }
 
+  const ext = (plant.format ?? "PDF").toUpperCase();
+  const areaDisplay = plant.area != null ? `${plant.area.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m²` : null;
+  const roomsDisplay = plant.rooms != null ? String(plant.rooms) : null;
+
   return (
     <div className="bg-white border border-[#e2e0da] rounded-[18px] overflow-hidden flex flex-col h-full">
       {/* Thumbnail Area */}
@@ -220,7 +352,7 @@ function PlantCard({ plant }: { plant: Plant }) {
           className="absolute top-3 left-3 font-mono text-[9px] font-bold px-[7px] py-[3px] rounded-[5px]"
           style={{ background: "#fbeee7", color: ACCENT }}
         >
-          {plant.ext}
+          {ext}
         </span>
 
         {/* Status Badges & Overlays */}
@@ -269,23 +401,23 @@ function PlantCard({ plant }: { plant: Plant }) {
       {/* Card Content */}
       <div className="p-[18px] flex flex-col flex-1">
         <div className="text-base font-bold">{plant.name}</div>
-        <div className="font-mono text-xs text-[#9a9a95] mt-[3px] mb-[14px]">{plant.project}</div>
+        <div className="font-mono text-xs text-[#9a9a95] mt-[3px] mb-[14px]">{plant.project ?? "Sem projeto"}</div>
 
         <div className="flex items-center gap-4 font-mono text-xs text-[#8a8a85] pb-[14px] border-b border-[#f0efec]">
-          <span>{plant.size}</span>
-          <span>{plant.date}</span>
+          <span>{fmtSize(plant.sizeBytes)}</span>
+          <span>{fmtDate(plant.uploadedAt)}</span>
         </div>
 
         <div className="flex items-center justify-between py-3">
           <span className="text-[13px] text-[#8a8a85]">Área</span>
           <span className="font-mono text-sm font-bold" style={{ color: areaColor }}>
-            {plant.area != null ? plant.area : "Aguardando análise"}
+            {areaDisplay ?? "Aguardando análise"}
           </span>
         </div>
         <div className="flex items-center justify-between pb-[14px]">
           <span className="text-[13px] text-[#8a8a85]">Ambientes</span>
           <span className="font-mono text-sm font-bold" style={{ color: areaColor }}>
-            {plant.rooms != null ? plant.rooms : "Aguardando análise"}
+            {roomsDisplay ?? "Aguardando análise"}
           </span>
         </div>
 

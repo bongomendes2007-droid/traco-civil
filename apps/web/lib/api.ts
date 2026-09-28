@@ -228,6 +228,11 @@ export async function uploadPlan(file: File, projectId?: number): Promise<Planta
   return request<PlantaDto>("/api/plantas/upload", { method: "POST", body: formData });
 }
 
+export async function listPlantas(projectId?: number): Promise<PlantaDto[]> {
+  const params = projectId != null ? `?projectId=${projectId}` : "";
+  return request<PlantaDto[]>(`/api/plantas${params}`);
+}
+
 export async function getPlanta(id: number): Promise<PlantaDto> {
   return request<PlantaDto>(`/api/plantas/${id}`);
 }

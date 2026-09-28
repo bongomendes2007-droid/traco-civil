@@ -20,5 +20,11 @@ public interface PlantaRepository extends JpaRepository<Planta, Long> {
            "where p.user = :user order by pl.id desc")
     List<Planta> findByProjectUserOrderByIdDesc(@Param("user") User user);
 
+    /** Filtra plantas por projeto específico do usuário, mantendo JOIN FETCH para evitar N+1. */
+    @Query("select pl from Planta pl left join fetch pl.project p " +
+           "where p.user = :user and p.id = :projectId order by pl.id desc")
+    List<Planta> findByProjectIdAndProjectUserOrderByIdDesc(
+            @Param("projectId") Long projectId, @Param("user") User user);
+
     long countByProject(Project project);
 }
