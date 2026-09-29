@@ -192,7 +192,7 @@ export default function ConfiguracoesPage() {
                         className="border-[1.5px] border-[#e2e0da] rounded-[11px] px-[15px] py-[13px] text-[15px]"
                       />
                     </div>
-                    <div>
+                    <div className="md:col-span-2">
                       <label className="block font-mono text-[11px] font-bold tracking-[.06em] text-[#6f6f69] mb-2 uppercase">FUNÇÃO</label>
                       <div className="flex gap-[9px]">
                         {["engenheiro", "arquiteto", "orçamentista"].map((role) => (
