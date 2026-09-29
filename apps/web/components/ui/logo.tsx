@@ -23,7 +23,7 @@ export function Logo({
     return (
       <span
         aria-hidden
-        className={cn("inline-block rounded-sm bg-traco-laranja", className)}
+        className={cn("inline-block rounded-sm bg-[#ff5a1f]", className)}
         style={{ width: heightMap[size], height: heightMap[size] }}
       />
     );

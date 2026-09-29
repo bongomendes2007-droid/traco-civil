@@ -12,11 +12,11 @@ export function DataTable({ headers, rows, className }: DataTableProps) {
     <div className={cn("w-full overflow-x-auto", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-grafite-3">
+          <tr className="border-b border-[#e2e0da]">
             {headers.map((header, i) => (
               <th
                 key={i}
-                className="text-left py-3 px-4 font-mono text-xs uppercase tracking-wider text-grafite-3 font-semibold"
+                className="text-left py-3 px-4 font-mono text-xs uppercase tracking-wider text-[#9a9a95] font-semibold"
               >
                 {header}
               </th>
@@ -27,7 +27,7 @@ export function DataTable({ headers, rows, className }: DataTableProps) {
           {rows.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              className="border-b border-grafite-2 last:border-0 hover:bg-grafite-2/30 transition-colors"
+              className="border-b border-[#ececea] last:border-0 hover:bg-[#f7f6f2]/30 transition-colors"
             >
               {row.map((cell, cellIndex) => (
                 <td
@@ -35,8 +35,8 @@ export function DataTable({ headers, rows, className }: DataTableProps) {
                   className={cn(
                     "py-3 px-4",
                     typeof cell === "number" || (typeof cell === "string" && /^[\d.,]+$/.test(cell))
-                      ? "font-mono text-white font-medium"
-                      : "text-papel/80"
+                      ? "font-mono text-[#111110] font-medium"
+                      : "text-[#111110]/80"
                   )}
                 >
                   {cell}
