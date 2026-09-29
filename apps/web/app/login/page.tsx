@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { login } from "@/lib/api";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Github, ShieldCheck } from "lucide-react";
 
 const ACCENT = "#ff5a1f";
@@ -50,6 +51,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [postLoginLoading, setPostLoginLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,6 +61,7 @@ function LoginForm() {
 
     try {
       await login(email, password);
+      setPostLoginLoading(true);
       router.push(redirectTo);
       router.refresh();
     } catch (err: any) {
@@ -78,6 +81,10 @@ function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (postLoginLoading) {
+    return <LoadingScreen />;
   }
 
   return (

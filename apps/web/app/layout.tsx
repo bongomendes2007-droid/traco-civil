@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
+import { AppLoadingWrapper } from "@/components/ui/loading-screen";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${spaceGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable}`}>
       <body className="font-sans antialiased">
-        {children}
+        <AppLoadingWrapper>{children}</AppLoadingWrapper>
       </body>
     </html>
   );
