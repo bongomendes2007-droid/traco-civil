@@ -30,7 +30,7 @@ import java.util.Optional;
  * o ReconciliationService trata como "skipped" e segue com o resultado
  * do worker. A análise NUNCA é derrubada por falha na revisão.
  *
- * Modelo: claude-sonnet-5 (melhor custo-benefício para visão estruturada).
+ * Modelo: claude-opus-5-5 (maior precisão para visão estruturada).
  * Timeout: 60s conforme especificação da Fase 2.
  */
 @Service
@@ -39,7 +39,7 @@ public class ClaudeVisionService {
     private static final Logger log = LoggerFactory.getLogger(ClaudeVisionService.class);
 
     private static final String API_URL = "https://api.anthropic.com/v1/messages";
-    private static final String MODEL = "claude-sonnet-5";
+    private static final String MODEL = "claude-opus-5-5";
     private static final int MAX_TOKENS = 4096;
     private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
