@@ -62,6 +62,9 @@ function LoginForm() {
     try {
       await login(email, password);
       setPostLoginLoading(true);
+      // Delay para garantir que a animação da tela de carregamento seja
+      // percebida antes da troca de página (a animação leva ~500ms).
+      await new Promise((resolve) => setTimeout(resolve, 500));
       router.push(redirectTo);
       router.refresh();
     } catch (err: any) {
