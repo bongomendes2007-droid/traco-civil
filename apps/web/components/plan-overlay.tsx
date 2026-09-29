@@ -115,7 +115,8 @@ export function PlanOverlay({ plantaId, roomsGeometry, scaleInfo, className }: P
     applyZoom(zoom + delta);
   }, [zoom, applyZoom]);
 
-  // Drag handlers
+  // Drag handlers — mousedown no container, mas move/up globais (window)
+  // para não interromper o arrasto quando o mouse sai da área do overlay.
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
     e.preventDefault();
@@ -123,21 +124,40 @@ export function PlanOverlay({ plantaId, roomsGeometry, scaleInfo, className }: P
     dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
   }, [zoom, pan]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    // Converte pixels de movimento para % relativo ao container
-    const containerW = containerRef.current?.clientWidth ?? 1;
-    const containerH = containerRef.current?.clientHeight ?? 1;
-    const pctX = (dx / containerW) * 100;
-    const pctY = (dy / containerH) * 100;
-    setPan(clampPan(dragStart.current.panX + pctX, dragStart.current.panY + pctY, zoom));
-  }, [isDragging, zoom, clampPan]);
+  // Listeners globais de mousemove/mouseup enquanto isDragging for true.
+  // Usamos refs para evitar re-registrar listeners a cada mudança de estado;
+  // as refs são atualizadas via efeito separado abaixo.
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  const isDraggingRef = useRef(isDragging);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      const containerW = containerRef.current?.clientWidth ?? 1;
+      const containerH = containerRef.current?.clientHeight ?? 1;
+      const pctX = (dx / containerW) * 100;
+      const pctY = (dy / containerH) * 100;
+      setPan(clampPan(dragStart.current.panX + pctX, dragStart.current.panY + pctY, zoomRef.current));
+    };
+
+    const onMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging, clampPan]);
 
   const rooms = roomsGeometry ?? [];
   const hasBoxes = rooms.some((r) => r.box != null);
@@ -158,9 +178,6 @@ export function PlanOverlay({ plantaId, roomsGeometry, scaleInfo, className }: P
       className={`relative w-full h-full flex items-center justify-center overflow-hidden select-none ${className ?? ""}`}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       style={{ cursor: canDrag ? (isDragging ? "grabbing" : "grab") : "default" }}
     >
       {/* Wrapper transformado: imagem + SVG escalam/juntos */}
